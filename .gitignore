@@ -8,18 +8,46 @@
 *.so
 *.dylib
 
-# Test binary, built with `go test -c`
+# Test binary, built with º`go test -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+go/pkg/
 
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
+# Coverage tools
+coverage.txt
+coverage*.out
+*.cover
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# Environment files
 .env
+.env.local
+.env.*.local
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Go modules
+go.sum
+
+# Local development files
+tmp/
+
+#others
+
