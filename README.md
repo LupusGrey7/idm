@@ -62,6 +62,12 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 golangci-lint run
 ```
 
+### Docker-compose up
+```bash
+# go to the project root folder, open the terminal
+docker compose up -d
+```
+
 ### 📄 License
 Apache License
 
