@@ -23,7 +23,7 @@ CREATE SEQUENCE global_enterprise_sequence
 --comment: create-employees-table
 CREATE TABLE IF NOT EXISTS public.employees (
     id enterprise_id PRIMARY KEY,
-    name VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -35,8 +35,12 @@ CREATE TABLE IF NOT EXISTS public.roles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     employee_id BIGINT NOT NULL,
+    CONSTRAINT roles_name_unique UNIQUE (name),
     CONSTRAINT fk_employee FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE
 );
+
+--comment: create-constraint-for-roles-name
+ALTER TABLE public.roles ADD CONSTRAINT roles_name_constraint UNIQUE (name);
 
 --comment: create-index-for-role
 CREATE INDEX roles_employee_id_idx ON public.roles (employee_id);
