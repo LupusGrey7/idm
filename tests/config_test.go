@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"github.com/stretchr/testify/require"
 	"idm/inner/common"
 	"os"
 	"path/filepath"
@@ -37,9 +38,11 @@ func TestGetConfig(t *testing.T) {
 	//в тесте проверяется- Пустой .env и переменные окружения
 	t.Run("Empty .env and no env vars", func(t *testing.T) {
 		// Создаем временный пустой .env
-		dir := t.TempDir()                      //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
-		envPath := filepath.Join(dir, ".env")   // Формируем путь к файлу .env внутри временной директории -> Например: /tmp/gotest123456/.env
-		os.WriteFile(envPath, []byte(""), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез) -> 0644 - права доступа (rw-r--r--)
+		dir := t.TempDir()                    //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
+		envPath := filepath.Join(dir, ".env") // Формируем путь к файлу .env внутри временной директории -> Например: /tmp/gotest123456/.env
+
+		err := os.WriteFile(envPath, []byte(""), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез) -> 0644 - права доступа (rw-r--r--)
+		require.NoError(t, err, "Failed to create empty .env file")
 
 		cfg := common.GetConfig(envPath) // Вызываем функцию GetConfig, функцию получения конфигурации передавая путь к пустому .env файлу
 
@@ -50,9 +53,11 @@ func TestGetConfig(t *testing.T) {
 	//в тесте проверяется-Переменные окружения переопределяют .env // Создаем .env без переменных
 	t.Run("Env vars override .env", func(t *testing.T) {
 
-		dir := t.TempDir()                      //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
-		envPath := filepath.Join(dir, ".env")   // Создаем путь к .env
-		os.WriteFile(envPath, []byte(""), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез) -> 0644 - права доступа (rw-r--r--)
+		dir := t.TempDir()                    //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
+		envPath := filepath.Join(dir, ".env") // Создаем путь к .env
+
+		err := os.WriteFile(envPath, []byte(""), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез) -> 0644 - права доступа (rw-r--r--)
+		require.NoError(t, err, "Failed to Env vars override .env file")
 
 		//t.Setenv() - временно устанавливает переменные окружения (восстанавливает оригинальные значения после теста)
 		t.Setenv("DB_DRIVER_NAME", "postgres")                       // Устанавливаем переменные окружения
@@ -70,10 +75,12 @@ func TestGetConfig(t *testing.T) {
 		// Создаем корректный .env
 		dir := t.TempDir() //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
 		envPath := filepath.Join(dir, ".env")
-		os.WriteFile(envPath, []byte(`
+
+		err := os.WriteFile(envPath, []byte(`
 DB_DRIVER_NAME=postgres
 DB_DSN=postgres://user:pass@localhost:5432/db
 `), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез), заполняем данными -> 0644 - права доступа (rw-r--r--)
+		require.NoError(t, err, "Failed to create .env file")
 
 		cfg := common.GetConfig(envPath)
 
@@ -87,10 +94,12 @@ DB_DSN=postgres://user:pass@localhost:5432/db
 		// Создаем .env с одними значениями
 		dir := t.TempDir() //t.TempDir() - создает временную директорию, которая автоматически очищается после теста
 		envPath := filepath.Join(dir, ".env")
-		os.WriteFile(envPath, []byte(`
+
+		err := os.WriteFile(envPath, []byte(`
 DB_DRIVER_NAME=mysql
 DB_DSN=mysql://user:pass@localhost:3306/db
 `), 0644)
+		require.NoError(t, err, "Failed to Env vars override .env file")
 
 		//t.Setenv() - временно устанавливает переменные окружения (восстанавливает оригинальные значения после теста)
 		t.Setenv("DB_DRIVER_NAME", "postgres")                       // Устанавливаем другие значения через env
