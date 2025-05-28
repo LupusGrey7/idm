@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Временная переменная, которая будет ссылаться на подключение к базе данных.
+// DB Временная переменная, которая будет ссылаться на подключение к базе данных.
 // Позже мы от неё избавимся - // *sqlx.DB - указатель на объект базы данных
 var DB *sqlx.DB
 
@@ -17,11 +17,13 @@ func ConnectDb() *sqlx.DB {
 	return ConnectDbWithCfg(cfg)
 }
 
-// func ConnectDbWithCfg подключиться к базе данных с переданным конфигом
-// Настройки ниже конфигурируют пулл подключений к базе данных.
-// Их названия стандартны для большинства библиотек.
-// Ознакомиться с их описанием можно на примере документации Hikari pool:
-// https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#gear-configuration-knobs-baby
+/**
+* func ConnectDbWithCfg() подключиться к базе данных с переданным конфигом,
+* Настройки ниже конфигурируют пулл подключений к базе данных.
+* Их названия стандартны для большинства библиотек.
+* Ознакомиться с их описанием можно на примере документации Hikari pool:
+* https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#gear-configuration-knobs-baby
+ */
 func ConnectDbWithCfg(cfg common.Config) *sqlx.DB {
 	DB = sqlx.MustConnect(cfg.DbDriverName, cfg.Dsn)
 
