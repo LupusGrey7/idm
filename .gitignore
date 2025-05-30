@@ -44,7 +44,6 @@ coverage*.out
 Thumbs.db
 
 # Go modules
-go.sum
 
 # Local development files
 tmp/
