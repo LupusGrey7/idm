@@ -12,11 +12,17 @@ type Config struct {
 	Dsn          string `validate:"required"`
 }
 
-// GetConfig получение конфигурации из .env файла или переменных окружения
-// _ = godotenv.Load(envFile) // где символ _ игнорирует возвращаемое значение
+/**
+* func GetConfig() получение конфигурации из .env файла или переменных окружения
+* _ = godotenv.Load(envFile) // где символ _ игнорирует возвращаемое значение
+ */
 func GetConfig(envFile string) Config {
+	// Тихая загрузка .env без логирования ошибок
 	if err := godotenv.Load(envFile); err != nil {
-		log.Fatal("Error loading .env file")
+		// Не логируем ошибку "файл не найден"
+		if !os.IsNotExist(err) {
+			log.Printf("Error loading .env file: %v", err)
+		}
 	}
 	var cfg = Config{ // значения переменных окружения могут быть получены
 		DbDriverName: os.Getenv("DB_DRIVER_NAME"),
