@@ -34,6 +34,14 @@ func (r *EmployeeRepository) CreateEmployee(entity EmployeeEntity) (employee Emp
 	return employee, err
 }
 
+// UPDATE - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
+func (r *EmployeeRepository) UpdateEmployee(entity *EmployeeEntity) error {
+	_, err := r.db.Exec(
+		"UPDATE employees SET name = $1, updated_at = $2 WHERE id = $3",
+		entity.Name, time.Now(), entity.Id)
+	return err
+}
+
 // FindAllEmployees - найти все элементы коллекции
 func (r *EmployeeRepository) FindAllEmployees() (employees []EmployeeEntity, err error) {
 	err = r.db.Select(&employees, "SELECT * FROM employees")
