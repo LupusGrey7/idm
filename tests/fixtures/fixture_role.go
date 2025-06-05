@@ -1,4 +1,4 @@
-package tests
+package fixtures
 
 import (
 	"idm/inner/role"
@@ -14,9 +14,11 @@ func NewFixtureRole(roles *role.RoleRepository) *FixtureRole {
 	return &FixtureRole{roles}
 }
 
-func (f *FixtureRole) Role(name string) int64 {
+// Role создает тестовую роль
+func (f *FixtureRole) Role(name string, employeeId *int64) int64 {
 	roleEntity := role.RoleEntity{
-		Name: name,
+		Name:       name,
+		EmployeeID: employeeId,
 	}
 
 	var result, err = f.role.CreateRole(roleEntity)
@@ -30,14 +32,16 @@ func (f *FixtureRole) Role(name string) int64 {
 func (f *FixtureRole) RoleUpdate(
 	id int64,
 	name string,
+	employeeID *int64,
 	createAt time.Time,
 	updateAt time.Time,
 ) role.RoleEntity {
 	roleEntity := role.RoleEntity{
-		Id:        id,
-		Name:      name,
-		CreatedAt: createAt,
-		UpdatedAt: updateAt,
+		Id:         id,
+		Name:       name,
+		EmployeeID: employeeID,
+		CreatedAt:  createAt,
+		UpdatedAt:  updateAt,
 	}
 
 	return roleEntity

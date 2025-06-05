@@ -1,20 +1,21 @@
-package tests
+package fixtures
 
 import (
 	"idm/inner/employee"
 	"time"
 )
 
-// FixtureEmployee - create fixture like a OOP stile
+// FixtureEmployee - create fixtures like a OOP stile
 type FixtureEmployee struct {
 	employees *employee.EmployeeRepository
 }
 
-// NewFixture - функция-конструктор, принимающая на вход employee.Repository (3) для работы с employee.Entity
-func NewFixture(employees *employee.EmployeeRepository) *FixtureEmployee {
+// NewFixtureEmployee - функция-конструктор, принимающая на вход employee.Repository (3) для работы с employee.Entity
+func NewFixtureEmployee(employees *employee.EmployeeRepository) *FixtureEmployee {
 	return &FixtureEmployee{employees}
 }
 
+// Employee - создает тестового сотрудника
 func (f *FixtureEmployee) Employee(name string) int64 {
 	employeeEntity := employee.EmployeeEntity{
 		Name: name,
@@ -26,6 +27,7 @@ func (f *FixtureEmployee) Employee(name string) int64 {
 	return result.Id
 }
 
+// EmployeeUpdate - EmployeeEntity создает сущность сотрудника для обновления
 func (f *FixtureEmployee) EmployeeUpdate(
 	id int64,
 	name string,

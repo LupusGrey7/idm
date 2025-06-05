@@ -12,8 +12,9 @@ type Config struct {
 	Dsn          string `validate:"required"`
 }
 
+//GetConfig
 /**
-* func GetConfig() получение конфигурации из .env файла или переменных окружения
+* GetConfig - получение конфигурации из .env файла или переменных окружения
 * _ = godotenv.Load(envFile) // где символ _ игнорирует возвращаемое значение
  */
 func GetConfig(envFile string) Config {

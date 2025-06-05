@@ -2,6 +2,7 @@ package role
 
 import (
 	"github.com/jmoiron/sqlx"
+	_ "idm/inner/employee"
 	"time"
 )
 
@@ -14,17 +15,21 @@ func NewRoleRepository(databese *sqlx.DB) *RoleRepository {
 }
 
 type RoleEntity struct {
-	Id        int64     `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	Id         int64     `db:"id"`
+	Name       string    `db:"name"`
+	EmployeeID *int64    `db:"employee_id"` // Nullable, указатель
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
 }
 
 // CreateRole - добавить новый элемент в коллекцию
 func (r *RoleRepository) CreateRole(entity RoleEntity) (roleEntity RoleEntity, err error) {
-	err = r.db.Get(&roleEntity,
-		"INSERT INTO roles(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
-		entity.Name, time.Now(), time.Now())
+	err = r.db.Get(&roleEntity, `
+        INSERT INTO roles (name, employee_id, created_at, updated_at) 
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, employee_id, created_at, updated_at`,
+		entity.Name, entity.EmployeeID, time.Now(), time.Now())
+
 	return roleEntity, err
 }
 

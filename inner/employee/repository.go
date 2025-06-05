@@ -61,6 +61,7 @@ func (r *EmployeeRepository) FindAllEmployeesByIds(ids []int64) (employees []Emp
 
 // DeleteAllEmployeesByIds - удалить элементы по слайсу их id
 func (r *EmployeeRepository) DeleteAllEmployeesByIds(ids []int64) (err error) {
+
 	query, args, err := sqlx.In("DELETE FROM employees WHERE id IN (?)", ids)
 	if err != nil {
 		return err
