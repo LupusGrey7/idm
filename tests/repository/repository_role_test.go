@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"idm/tests/fixtures"
 	"idm/tests/testutils"
+	"log"
 	"testing"
 	"time"
 )
@@ -21,6 +22,7 @@ func TestRoleRepository(t *testing.T) {
 	// func for cleaning DB in case panic
 	defer func() {
 		if err := recover(); err != nil {
+			log.Print("The recovery function received an error while executing!")
 		}
 		clearDatabase()
 	}()

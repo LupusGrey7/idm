@@ -16,13 +16,13 @@ func TestEmployeeRepository(t *testing.T) {
 	var db = testutils.InitTestDB() //var db = database.ConnectDb()
 	fixture := fixtures.NewFixture(db)
 	var clearDatabase = func() {
-		//db.MustExec("delete from employees")
 		fixture.CleanDatabase()
 	}
 
 	// func for cleaning DB in case panic
 	defer func() {
 		if err := recover(); err != nil {
+			log.Print("The recovery function received an error while executing!")
 		}
 		clearDatabase()
 	}()
