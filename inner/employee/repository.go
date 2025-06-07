@@ -37,6 +37,7 @@ func (r *Repository) FindAllEmployeesByIds(ids []int64) (employees []Entity, err
 // FindById - найти элемент коллекции по его id
 func (r *Repository) FindById(id int64) (employee Entity, err error) {
 	err = r.db.Get(&employee, "SELECT * FROM employees WHERE id = $1", id)
+
 	return employee, err
 }
 
@@ -45,6 +46,7 @@ func (r *Repository) CreateEmployee(entity Entity) (employee Entity, err error) 
 	err = r.db.Get(&employee,
 		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
 		entity.Name, time.Now(), time.Now())
+
 	return employee, err
 }
 
@@ -73,5 +75,6 @@ func (r *Repository) DeleteAllEmployeesByIds(ids []int64) error {
 // DeleteEmployeeById - удалить элемент коллекции по его id
 func (r *Repository) DeleteEmployeeById(id int64) error {
 	_, err := r.db.Exec("DELETE FROM employees WHERE id = $1", id)
+
 	return err
 }
