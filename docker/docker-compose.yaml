@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 volumes:
   data:
@@ -26,6 +26,14 @@ services:
     ports:
      - "127.0.0.1:5434:5432" # Используем другой порт (5434)
     environment:
-      POSTGRES_HOST_AUTH_METHOD: trust  # Разрешает подключение без пароля
-      POSTGRES_DB: test_db
-
+      #POSTGRES_HOST_AUTH_METHOD: trust  # Разрешает подключение без пароля
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: idm_tests
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d # Автоматическое применение миграций # goose migrations
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U test -d idm_tests" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5

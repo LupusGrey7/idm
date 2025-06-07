@@ -1,4 +1,4 @@
-package tests
+package database
 
 import (
 	"fmt"
@@ -51,10 +51,11 @@ func TestDatabaseConnection(t *testing.T) {
 		// Используем тестовую БД в Docker
 		cfg := common.Config{
 			DbDriverName: "postgres",
-			Dsn:          "postgres://postgres@localhost:5434/test_db?sslmode=disable", // Параметры из docker-compose
+			Dsn:          "postgres://test:test@localhost:5434/idm_tests?sslmode=disable", // Параметры из docker-compose
 		}
 
 		db := database.ConnectDbWithCfg(cfg)
+
 		defer db.Close() //после завершения теста
 
 		// Проверяем подключение

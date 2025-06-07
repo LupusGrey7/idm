@@ -2,6 +2,7 @@ package role
 
 import (
 	"github.com/jmoiron/sqlx"
+	_ "idm/inner/employee"
 	"time"
 )
 
@@ -14,10 +15,22 @@ func NewRoleRepository(databese *sqlx.DB) *RoleRepository {
 }
 
 type RoleEntity struct {
-	Id        int64     `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
+	Id         int64     `db:"id"`
+	Name       string    `db:"name"`
+	EmployeeID *int64    `db:"employee_id"` // Nullable, указатель
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
+}
+
+// CreateRole - добавить новый элемент в коллекцию
+func (r *RoleRepository) CreateRole(entity RoleEntity) (roleEntity RoleEntity, err error) {
+	err = r.db.Get(&roleEntity, `
+        INSERT INTO roles (name, employee_id, created_at, updated_at) 
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, employee_id, created_at, updated_at`,
+		entity.Name, entity.EmployeeID, time.Now(), time.Now())
+
+	return roleEntity, err
 }
 
 // FindById - найти элемент коллекции по его id (этот метод мы реализовали на уроке)
@@ -26,12 +39,12 @@ func (r *RoleRepository) FindById(id int64) (entity RoleEntity, err error) {
 	return entity, err
 }
 
-// CreateRole - добавить новый элемент в коллекцию
-func (r *RoleRepository) CreateRole(entity RoleEntity) (roleEntity RoleEntity, err error) {
-	err = r.db.Get(&roleEntity,
-		"INSERT INTO roles(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
-		entity.Name, time.Now(), time.Now())
-	return roleEntity, err
+// UpdateEmployee - UPDATE / Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
+func (r *RoleRepository) UpdateEmployee(entity *RoleEntity) error {
+	_, err := r.db.Exec(
+		"UPDATE roles SET name = $1, updated_at = $2 WHERE id = $3",
+		entity.Name, time.Now(), entity.Id)
+	return err
 }
 
 // FindAllRoles - найти все элементы коллекции

@@ -9,7 +9,7 @@ import (
 
 // DB Временная переменная, которая будет ссылаться на подключение к базе данных.
 // Позже мы от неё избавимся - // *sqlx.DB - указатель на объект базы данных
-var DB *sqlx.DB
+//var DB *sqlx.DB
 
 // ConnectDb получить конфиг и подключиться с ним к базе данных
 func ConnectDb() *sqlx.DB {
@@ -25,13 +25,13 @@ func ConnectDb() *sqlx.DB {
 * https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#gear-configuration-knobs-baby
  */
 func ConnectDbWithCfg(cfg common.Config) *sqlx.DB {
-	DB = sqlx.MustConnect(cfg.DbDriverName, cfg.Dsn)
+	db := sqlx.MustConnect(cfg.DbDriverName, cfg.Dsn)
 
 	// Настраиваем пул соединений через глобальную переменную DB
-	DB.SetMaxIdleConns(5)
-	DB.SetMaxOpenConns(20)
-	DB.SetConnMaxLifetime(1 * time.Minute)
-	DB.SetConnMaxIdleTime(10 * time.Minute)
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(20)
+	db.SetConnMaxLifetime(1 * time.Minute)
+	db.SetConnMaxIdleTime(10 * time.Minute)
 
-	return DB
+	return db
 }

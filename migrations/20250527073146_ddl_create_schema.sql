@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.roles (
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    employee_id BIGINT NOT NULL,
+    employee_id BIGINT DEFAULT NULL,
     CONSTRAINT roles_name_unique UNIQUE (name),
     CONSTRAINT fk_employee FOREIGN KEY (employee_id) REFERENCES public.employees(id) ON DELETE CASCADE
     );
