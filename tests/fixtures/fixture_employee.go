@@ -7,17 +7,17 @@ import (
 
 // FixtureEmployee - create fixtures like a OOP stile
 type FixtureEmployee struct {
-	employees *employee.EmployeeRepository
+	employees *employee.Repository
 }
 
 // NewFixtureEmployee - функция-конструктор, принимающая на вход employee.Repository (3) для работы с employee.Entity
-func NewFixtureEmployee(employees *employee.EmployeeRepository) *FixtureEmployee {
+func NewFixtureEmployee(employees *employee.Repository) *FixtureEmployee {
 	return &FixtureEmployee{employees}
 }
 
 // Employee - создает тестового сотрудника
 func (f *FixtureEmployee) Employee(name string) int64 {
-	employeeEntity := employee.EmployeeEntity{
+	employeeEntity := employee.Entity{
 		Name: name,
 	}
 	var result, err = f.employees.CreateEmployee(employeeEntity)
@@ -27,14 +27,14 @@ func (f *FixtureEmployee) Employee(name string) int64 {
 	return result.Id
 }
 
-// EmployeeUpdate - EmployeeEntity создает сущность сотрудника для обновления
+// EmployeeUpdate - Entity создает сущность сотрудника для обновления
 func (f *FixtureEmployee) EmployeeUpdate(
 	id int64,
 	name string,
 	createAt time.Time,
 	updateAt time.Time,
-) employee.EmployeeEntity {
-	employeeEntity := employee.EmployeeEntity{
+) employee.Entity {
+	employeeEntity := employee.Entity{
 		Id:        id,
 		Name:      name,
 		CreatedAt: createAt,

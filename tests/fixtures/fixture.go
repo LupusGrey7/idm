@@ -9,16 +9,16 @@ import (
 // Fixture - общая фикстура для всех сущностей
 type Fixture struct {
 	db        *sqlx.DB
-	employees *employee.EmployeeRepository
-	roles     *role.RoleRepository
+	employees *employee.Repository
+	roles     *role.Repository
 }
 
-// NewFixture создает новую фикстуру
+// NewFixture - функция конструктор, создает новую фикстуру
 func NewFixture(db *sqlx.DB) *Fixture {
 	return &Fixture{
 		db:        db,
-		employees: employee.NewEmployeeRepository(db),
-		roles:     role.NewRoleRepository(db),
+		employees: employee.NewRepository(db),
+		roles:     role.NewRepository(db),
 	}
 }
 
@@ -28,11 +28,11 @@ func (f *Fixture) CleanDatabase() {
 }
 
 // EmployeeRepository возвращает репозиторий для работы с сотрудниками
-func (f *Fixture) EmployeeRepository() *employee.EmployeeRepository {
+func (f *Fixture) EmployeeRepository() *employee.Repository {
 	return f.employees
 }
 
 // RoleRepository возвращает репозиторий для работы с ролями
-func (f *Fixture) RoleRepository() *role.RoleRepository {
+func (f *Fixture) RoleRepository() *role.Repository {
 	return f.roles
 }
