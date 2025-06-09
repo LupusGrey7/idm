@@ -6,17 +6,17 @@ import (
 )
 
 type FixtureRole struct {
-	role *role.RoleRepository
+	role *role.Repository
 }
 
 // NewFixture - функция-конструктор, принимающая на вход employee.Repository (3) для работы с employee.Entity
-func NewFixtureRole(roles *role.RoleRepository) *FixtureRole {
+func NewFixtureRole(roles *role.Repository) *FixtureRole {
 	return &FixtureRole{roles}
 }
 
 // Role создает тестовую роль
 func (f *FixtureRole) Role(name string, employeeId *int64) int64 {
-	roleEntity := role.RoleEntity{
+	roleEntity := role.Entity{
 		Name:       name,
 		EmployeeID: employeeId,
 	}
@@ -35,8 +35,8 @@ func (f *FixtureRole) RoleUpdate(
 	employeeID *int64,
 	createAt time.Time,
 	updateAt time.Time,
-) role.RoleEntity {
-	roleEntity := role.RoleEntity{
+) role.Entity {
+	roleEntity := role.Entity{
 		Id:         id,
 		Name:       name,
 		EmployeeID: employeeID,
