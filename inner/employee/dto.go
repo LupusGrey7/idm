@@ -18,7 +18,7 @@ type Response struct {
 	UpdateAt time.Time `json:"updateAt"`
 }
 
-func (e *Entity) toResponse() Response {
+func (e *Entity) ToResponse() Response {
 	return Response{
 		Id:       e.Id,
 		Name:     e.Name,

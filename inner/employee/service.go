@@ -33,7 +33,7 @@ func (svc *Service) FindAll() ([]Response, error) {
 
 	responses := make([]Response, 0, len(entities))
 	for _, entity := range entities {
-		responses = append(responses, entity.toResponse())
+		responses = append(responses, entity.ToResponse())
 	}
 
 	return responses, nil
@@ -47,7 +47,7 @@ func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 
 	responses := make([]Response, 0, len(entities))
 	for _, entity := range entities {
-		responses = append(responses, entity.toResponse())
+		responses = append(responses, entity.ToResponse())
 	}
 
 	return responses, err
@@ -61,7 +61,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	}
 
 	// в случае успеха вернём структуру Response и nil вместо ошибки
-	return entity.toResponse(), nil
+	return entity.ToResponse(), nil
 }
 
 func (svc *Service) Create(entity *Entity) (Response, error) {
@@ -70,7 +70,7 @@ func (svc *Service) Create(entity *Entity) (Response, error) {
 		return Response{}, fmt.Errorf("error creating employee with name %s: %w", entity.Name, err)
 	}
 
-	return entityRsl.toResponse(), nil
+	return entityRsl.ToResponse(), nil
 }
 
 func (svc *Service) Update(entity *Entity) (Response, error) {
@@ -79,7 +79,7 @@ func (svc *Service) Update(entity *Entity) (Response, error) {
 		return Response{}, fmt.Errorf("error updating employee with name %s: %w", entity.Name, err)
 	}
 
-	return Response{}, err
+	return entity.ToResponse(), nil // <- Преобразуем Entity в Response
 }
 
 func (svc *Service) DeleteById(id int64) (Response, error) {
