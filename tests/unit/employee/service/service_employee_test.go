@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"idm/inner/employee"
+	"idm/inner/validator"
 	"testing"
 	"time"
 )
@@ -25,9 +26,9 @@ func (m *MockRepo) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err er
 	return args.Get(0).(bool), args.Error(1)
 }
 
-func (m *MockRepo) CreateEntityTx(tx *sqlx.Tx, entity *employee.Entity) (employee.Entity, error) {
+func (m *MockRepo) CreateEntityTx(tx *sqlx.Tx, entity employee.Entity) (int64, error) {
 	args := m.Called(tx, entity)
-	return args.Get(0).(employee.Entity), args.Error(1)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 // Реализация ВСЕХ методов интерфейса для тестов
@@ -83,7 +84,8 @@ func TestEmployeeService(t *testing.T) {
 	t.Run("should return All found employees by IDs", func(t *testing.T) {
 		now := time.Now()
 		var repo = new(MockRepo)
-		var service = employee.NewService(repo) // Используем конструктор
+		validator := validator.Validator{}
+		var service = employee.NewService(repo, validator) // Используем конструктор
 
 		entities := []employee.Entity{
 			{Id: 1, Name: "John", CreatedAt: now},
@@ -108,7 +110,8 @@ func TestEmployeeService(t *testing.T) {
 	})
 	t.Run("should return error failed to get employees by IDs", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var service = employee.NewService(repo) // Используем конструктор
+		validator := validator.Validator{}
+		var service = employee.NewService(repo, validator) // Используем конструктор
 		var ids = []int64{1, 2, 3}
 
 		var expectedErr = errors.New("database error") // ошибка, которую вернёт репозиторий
@@ -127,7 +130,8 @@ func TestEmployeeService(t *testing.T) {
 
 	t.Run("should return All found employees", func(t *testing.T) {
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
 		now := time.Now()
 
 		entities := []employee.Entity{
@@ -151,10 +155,11 @@ func TestEmployeeService(t *testing.T) {
 	})
 
 	t.Run("should return found employee by ID", func(t *testing.T) {
-		var repo = new(MockRepo) // Создаём экземпляр мок-объекта
-		// Создаём экземпляр сервиса, который собираемся тестировать. Передаём в его конструктор мок вместо реального репозитория
-		var service = employee.NewService(repo) // Используем конструктор
-		var entity = employee.Entity{           // создаём Entity, которую должен вернуть репозиторий
+		var repo = new(MockRepo)                        // Создаём экземпляр мок-объекта
+		validator := validator.Validator{}              // Создаём экземпляр сервиса, который собираемся тестировать. Передаём в его конструктор мок вместо реального репозитория
+		service := employee.NewService(repo, validator) // Используем конструктор
+
+		var entity = employee.Entity{ // создаём Entity, которую должен вернуть репозиторий
 			Id:        1,
 			Name:      "John Doe",
 			CreatedAt: time.Now(),
@@ -182,10 +187,12 @@ func TestEmployeeService(t *testing.T) {
 		*чтобы счётчик содержал количество вызовов к репозиторию, выполненных в рамках одного нашего теста.
 		*Ели сделать мок общим для нескольких тестов, то он посчитает вызовы, которые сделали все тесты
 		 */
-		var repo = new(MockRepo)                // Создаём для теста новый экземпляр мока репозитория.
-		var service = employee.NewService(repo) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
-		var entity = employee.Entity{}          // Создаём пустую структуру employee.Entity, которую сервис вернёт вместе с ошибкой
-		var err = errors.New("database error")  // ошибка, которую вернёт репозиторий
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+
+		var entity = employee.Entity{}         // Создаём пустую структуру employee.Entity, которую сервис вернёт вместе с ошибкой
+		var err = errors.New("database error") // ошибка, которую вернёт репозиторий
 
 		// ошибка, которую должен будет вернуть сервис
 		var want = fmt.Errorf("error finding employee with id 1: %w", err)
@@ -203,9 +210,10 @@ func TestEmployeeService(t *testing.T) {
 	})
 
 	t.Run("when create Employee should return Response", func(t *testing.T) {
-		var repo = new(MockRepo)
-		var service = employee.NewService(repo) // Используем конструктор
-		entityRequest := &employee.Entity{      // <- & создаёт указатель (как `new E()` в Java)
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		entityRequest := &employee.Entity{              // <- & создаёт указатель (как `new E()` в Java)
 			Name:      "John Doe",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -230,8 +238,9 @@ func TestEmployeeService(t *testing.T) {
 	})
 
 	t.Run("when update Employee should return Response", func(t *testing.T) {
-		repo := new(MockRepo)
-		service := employee.NewService(repo)
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
 		// Создаём объекта
 		entityRequest := &employee.Entity{ // <- & создаёт указатель (как `new` в Java)
@@ -255,8 +264,9 @@ func TestEmployeeService(t *testing.T) {
 
 	t.Run("when delete All Employees by employee IDs", func(t *testing.T) {
 
-		var repo = new(MockRepo)
-		var service = employee.NewService(repo) // Используем конструктор
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 		var IDs = []int64{1, 2, 3}
 
 		// конфигурируем поведение мок-репозитория (при вызове метода FindById с аргументом 1 вернуть Entity, созданную нами выше)
@@ -277,8 +287,9 @@ func TestEmployeeService(t *testing.T) {
 
 	t.Run("when delete Employee by ID should return err", func(t *testing.T) {
 
-		var repo = new(MockRepo)
-		var service = employee.NewService(repo)
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
 		// ошибка, которую вернёт репозиторий
 		var err = errors.New("database error")
@@ -298,8 +309,9 @@ func TestEmployeeService(t *testing.T) {
 	})
 
 	t.Run("when delete Employee by ID", func(t *testing.T) {
-		var repo = new(MockRepo)
-		var service = employee.NewService(repo)
+		var repo = new(MockRepo)                        // Создаём для теста новый экземпляр мока репозитория.
+		validator := validator.Validator{}              //
+		service := employee.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
 		// ошибка, которую вернёт репозиторий
 		//var err = errors.New("database error")

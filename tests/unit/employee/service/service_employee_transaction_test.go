@@ -7,15 +7,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"idm/inner/employee"
+	"idm/inner/validator"
 	"testing"
 	"time"
 )
 
 func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 
-	var a = assert.New(t) // создаём экземпляр объекта с ассерт-функциями
-	// Создаем mock DB
-	db, mock, err := sqlmock.New()
+	var a = assert.New(t)          // создаём экземпляр объекта с ассерт-функциями
+	db, mock, err := sqlmock.New() // Создаем mock DB
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -26,7 +26,8 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	t.Run("when success create Employee using Trx", func(t *testing.T) {
 		// Arrange
 		repo := employee.NewRepository(sqlxDB)
-		service := employee.NewService(repo)
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
 		now := time.Now()
 		//db, mock, err := sqlmock.New()
 
@@ -41,11 +42,11 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 		//}
 
 		//Тестовые данные
-		entityRequest := &employee.Entity{
-			Name:      "John Sena",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
+		//entityRequest := employee.Entity{
+		//	Name:      "John Sena",
+		//	CreatedAt: time.Now(),
+		//	UpdatedAt: time.Now(),
+		//}
 
 		//expectedEntity := employee.Entity{
 		//	Id:        1,
@@ -53,6 +54,8 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 		//	CreatedAt: entityRequest.CreatedAt,
 		//	UpdatedAt: entityRequest.UpdatedAt,
 		//}
+
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 
 		//---/
 		mock.ExpectBegin()
@@ -87,15 +90,17 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		// Arrange
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
 
 		now := time.Now()
-		entityRequest := &employee.Entity{
-			Name:      "John Sena",
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
+		//entityRequest := &employee.Entity{
+		//	Name:      "John Sena",
+		//	CreatedAt: now,
+		//	UpdatedAt: now,
+		//}
 
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		expectedEntity := employee.Entity{
 			Id:        1,
 			Name:      "John Sena",
@@ -120,10 +125,11 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//   - не удалось создать транзакцию
 	t.Run("should return error when transaction creation fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
 
 		// Подготавливаем тестовые данные
-		entityRequest := &employee.Entity{Name: "John Sena"}
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		expectedErr := errors.New("tx creation error")
 
 		// Настраиваем мок: возвращаем ошибку при создании транзакции
@@ -142,8 +148,9 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	// Ошибка при проверке наличия работника
 	t.Run("should return error when employee check fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
-		entityRequest := &employee.Entity{Name: "John Sena"}
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil) // nil указатель правильного типа
 		checkErr := errors.New("check error")
 
@@ -161,8 +168,9 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//Работник уже существует
 	t.Run("should return error when employee already exists", func(t *testing.T) {
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
-		entityRequest := &employee.Entity{Name: "John Sena"}
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil)
 
 		repo.On("BeginTransaction").Return(tx, nil)
@@ -179,8 +187,9 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//Ошибка при создании работника
 	t.Run("should return error when employee creation fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		service := employee.NewService(repo)
-		entityRequest := &employee.Entity{Name: "John Sena"}
+		validator := validator.Validator{}
+		service := employee.NewService(repo, validator)
+		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil)
 		createErr := errors.New("creation error")
 

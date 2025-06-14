@@ -57,18 +57,19 @@ func (r *Repository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err 
 }
 
 // CreateEntityTx - created Employee using DB Transaction
-func (r *Repository) CreateEntityTx(tx *sqlx.Tx, entity *Entity) (employee Entity, err error) {
+func (r *Repository) CreateEntityTx(tx *sqlx.Tx, entity Entity) (employeeId int64, err error) {
 	err = tx.Get(
-		&employee,
-		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
+		&employeeId,
+		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING id",
 		entity.Name, time.Now(), time.Now(),
 	)
-	return employee, err
+	return employeeId, err
 }
 
 // CreateEmployee - добавить новый элемент в коллекцию
 func (r *Repository) CreateEmployee(entity *Entity) (employee Entity, err error) {
-	err = r.db.Get(&employee,
+	err = r.db.Get(
+		&employee,
 		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
 		entity.Name, time.Now(), time.Now())
 

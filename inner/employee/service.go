@@ -3,29 +3,40 @@ package employee
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	"idm/inner/common"
+	_ "idm/inner/validator"
 )
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
 type Repo interface {
+	BeginTransaction() (tx *sqlx.Tx, err error)
 	FindById(id int64) (Entity, error)
 	FindAllEmployees() ([]Entity, error)
 	FindAllEmployeesByIds(ids []int64) ([]Entity, error)
-	FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error)
+	FindByNameTx(tx *sqlx.Tx, name string) (bool, error)
 	CreateEmployee(entity *Entity) (Entity, error)
-	CreateEntityTx(tx *sqlx.Tx, entity *Entity) (Entity, error)
+	CreateEntityTx(tx *sqlx.Tx, entity Entity) (int64, error)
 	UpdateEmployee(entity *Entity) error
 	DeleteEmployeeById(id int64) error
 	DeleteAllEmployeesByIds(ids []int64) error
-	BeginTransaction() (tx *sqlx.Tx, err error)
+}
+
+type Validator interface {
+	Validate(request any) error
 }
 
 // NewService - функция-конструктор
-func NewService(repo Repo) *Service {
+func NewService(
+	repo Repo,
+	validator Validator,
+) *Service {
 	return &Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
 }
 
@@ -104,30 +115,38 @@ func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
 	return Response{}, err
 }
 
-func (svc *Service) CreateEmployeeTx(entity *Entity) (employee Response, err error) {
+func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
+	var err = svc.validator.Validate(request) // Валидируем запрос
+	if err != nil {
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию (про кастомные ошибки - дальше)
+		return 0, common.RequestValidationError{Message: err.Error()}
+	}
+
 	tx, err := svc.repo.BeginTransaction() // create Tx for using
 
 	// отложенная функция завершения транзакции
 	svc.closeTx(tx, err, "Creating")
 
 	if err != nil {
-		return Response{}, fmt.Errorf("error creating transaction: %w", err)
+		return 0, fmt.Errorf("error create employee:  error creating transaction: %w", err)
 	}
-
-	var createdEmployee = Entity{}
 
 	// выполняем несколько запросов в базе данных
-	isExistsEmployee, err := svc.repo.FindByNameTx(tx, entity.Name)
+	isExist, err := svc.repo.FindByNameTx(tx, request.Name)
 	if err != nil {
-		return Response{}, fmt.Errorf("error finding Employee by Name: %s, %w", entity.Name, err)
+		return 0, fmt.Errorf("error finding Employee by Name: %s, %w", request.Name, err)
 	}
-	if !isExistsEmployee {
-		createdEmployee, err = svc.repo.CreateEntityTx(tx, entity)
+	if isExist {
+		return 0, common.AlreadyExistsError{
+			fmt.Sprintf("employee with name %s already exists", request.Name),
+		}
 	}
+	var entity = request.ToEntity()
+	createdEmployeeId, err := svc.repo.CreateEntityTx(tx, entity)
 	if err != nil {
-		return Response{}, fmt.Errorf("error creating Employee whith Name: %s, %w", entity.Name, err)
+		return 0, fmt.Errorf("error creating Employee whith Name: %s, %w", request.Name, err)
 	}
-	return createdEmployee.ToResponse(), err
+	return createdEmployeeId, err
 }
 
 func (svc *Service) FindEmployeeByNameTx(name string) (isExists bool, err error) {
