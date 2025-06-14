@@ -2,6 +2,7 @@ package employee
 
 import (
 	"fmt"
+	"github.com/jmoiron/sqlx"
 )
 
 type Service struct {
@@ -12,10 +13,13 @@ type Repo interface {
 	FindById(id int64) (Entity, error)
 	FindAllEmployees() ([]Entity, error)
 	FindAllEmployeesByIds(ids []int64) ([]Entity, error)
-	Create(entity *Entity) (Entity, error)
+	FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error)
+	CreateEmployee(entity *Entity) (Entity, error)
+	CreateEntityTx(tx *sqlx.Tx, entity *Entity) (Entity, error)
 	UpdateEmployee(entity *Entity) error
 	DeleteEmployeeById(id int64) error
 	DeleteAllEmployeesByIds(ids []int64) error
+	BeginTransaction() (tx *sqlx.Tx, err error)
 }
 
 // NewService - функция-конструктор
@@ -65,7 +69,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 }
 
 func (svc *Service) Create(entity *Entity) (Response, error) {
-	var entityRsl, err = svc.repo.Create(entity)
+	var entityRsl, err = svc.repo.CreateEmployee(entity)
 	if err != nil {
 		return Response{}, fmt.Errorf("error creating employee with name %s: %w", entity.Name, err)
 	}
@@ -98,4 +102,85 @@ func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
 	}
 
 	return Response{}, err
+}
+
+func (svc *Service) CreateEmployeeTx(entity *Entity) (employee Response, err error) {
+	tx, err := svc.repo.BeginTransaction() // create Tx for using
+
+	// отложенная функция завершения транзакции
+	defer func() {
+		// проверяем, не было ли паники
+		if r := recover(); r != nil {
+			err = fmt.Errorf("creating employee panic: %v", r)
+			errTx := tx.Rollback() // если была паника, то откатываем транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else if err != nil {
+			errTx := tx.Rollback() // если произошла другая ошибка (не паника), то откатываем транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else {
+			errTx := tx.Commit() // если ошибок нет, то коммитим транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: commiting transaction error: %w", errTx)
+			}
+		}
+	}()
+
+	if err != nil {
+		return Response{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+
+	var createdEmployee = Entity{}
+
+	// выполняем несколько запросов в базе данных
+	isExistsEmployee, err := svc.repo.FindByNameTx(tx, entity.Name)
+	if err != nil {
+		return Response{}, fmt.Errorf("error finding Employee by Name: %s, %w", entity.Name, err)
+	}
+	if isExistsEmployee != true {
+		createdEmployee, err = svc.repo.CreateEntityTx(tx, entity)
+	}
+	if err != nil {
+		return Response{}, fmt.Errorf("error creating Employee whith Name: %s, %w", entity.Name, err)
+	}
+	return createdEmployee.ToResponse(), err
+}
+
+func (svc *Service) FindEmployeeByNameTx(name string) (isExists bool, err error) {
+	tx, err := svc.repo.BeginTransaction() // create Tx for using
+
+	// отложенная функция завершения транзакции
+	defer func() {
+		// проверяем, не было ли паники
+		if r := recover(); r != nil {
+			err = fmt.Errorf("creating employee panic: %v", r)
+			errTx := tx.Rollback() // если была паника, то откатываем транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else if err != nil {
+			errTx := tx.Rollback() // если произошла другая ошибка (не паника), то откатываем транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: rolling back transaction errors: %w, %w", err, errTx)
+			}
+		} else {
+			errTx := tx.Commit() // если ошибок нет, то коммитим транзакцию
+			if errTx != nil {
+				err = fmt.Errorf("creating employee: commiting transaction error: %w", errTx)
+			}
+		}
+	}()
+
+	if err != nil {
+		return false, fmt.Errorf("error creating transaction: %w", err)
+	}
+
+	isExists, err = svc.repo.FindByNameTx(tx, name)
+	if err != nil {
+		return isExists, fmt.Errorf("error checking existing Employee by Name: %v, %w", isExists, err)
+	}
+	return isExists, err
 }

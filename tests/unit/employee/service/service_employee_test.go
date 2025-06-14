@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"idm/inner/employee"
@@ -13,6 +14,20 @@ import (
 // Объявляем структуру мок-репозитория
 type MockRepo struct {
 	mock.Mock
+}
+
+func (m *MockRepo) BeginTransaction() (*sqlx.Tx, error) {
+	args := m.Called()
+	return args.Get(0).(*sqlx.Tx), args.Error(1) // Приведение типов в моках (args.Get(0).(sqlx.Tx))
+}
+func (m *MockRepo) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
+	args := m.Called(tx, name)
+	return args.Get(0).(bool), args.Error(1)
+}
+
+func (m *MockRepo) CreateEntityTx(tx *sqlx.Tx, entity *employee.Entity) (employee.Entity, error) {
+	args := m.Called(tx, entity)
+	return args.Get(0).(employee.Entity), args.Error(1)
 }
 
 // Реализация ВСЕХ методов интерфейса для тестов
@@ -31,7 +46,7 @@ func (m *MockRepo) FindAllEmployeesByIds(ids []int64) ([]employee.Entity, error)
 	return args.Get(0).([]employee.Entity), args.Error(1) //
 }
 
-func (m *MockRepo) Create(entity *employee.Entity) (employee.Entity, error) {
+func (m *MockRepo) CreateEmployee(entity *employee.Entity) (employee.Entity, error) {
 	args := m.Called(entity)
 	return args.Get(0).(employee.Entity), args.Error(1)
 }
@@ -54,6 +69,16 @@ func (m *MockRepo) DeleteAllEmployeesByIds(ids []int64) error {
 func TestEmployeeService(t *testing.T) {
 
 	var a = assert.New(t) // создаём экземпляр объекта с ассерт-функциями
+
+	// Вспомогательная функция для создания тестовых данных
+	//newEntityRequest := func(name string) *employee.Entity {
+	//	now := time.Now()
+	//	return &employee.Entity{
+	//		Name:      name,
+	//		CreatedAt: now,
+	//		UpdatedAt: now,
+	//	}
+	//}
 
 	t.Run("should return All found employees by IDs", func(t *testing.T) {
 		now := time.Now()
@@ -195,7 +220,7 @@ func TestEmployeeService(t *testing.T) {
 		expectedResponses := expectedEntity.ToResponse()
 
 		// Настройка возврата, Настраиваем мок. Обратить внимание - ожидаем указатель!
-		repo.On("Create", entityRequest).Return(expectedEntity, nil)
+		repo.On("CreateEmployee", entityRequest).Return(expectedEntity, nil)
 
 		responses, err := service.Create(entityRequest)
 
@@ -293,4 +318,5 @@ func TestEmployeeService(t *testing.T) {
 		a.True(repo.AssertNumberOfCalls(t, "DeleteEmployeeById", 1))
 		repo.AssertExpectations(t) // проверяем что были вызваны все объявленные ожидания
 	})
+
 }
