@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"idm/inner/employee"
 	"testing"
@@ -15,6 +16,21 @@ type StubEmployeeRepository struct {
 	err      error
 }
 
+func (s *StubEmployeeRepository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StubEmployeeRepository) CreateEntityTx(tx *sqlx.Tx, entity *employee.Entity) (employee.Entity, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StubEmployeeRepository) BeginTransaction() (tx *sqlx.Tx, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *StubEmployeeRepository) FindAllEmployees() ([]employee.Entity, error) {
 	//TODO implement me
 	panic("implement me")
@@ -25,7 +41,7 @@ func (s *StubEmployeeRepository) FindAllEmployeesByIds(ids []int64) ([]employee.
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) Create(entity *employee.Entity) (employee.Entity, error) {
+func (s *StubEmployeeRepository) CreateEmployee(entity *employee.Entity) (employee.Entity, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -97,6 +113,6 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 		// Проверяем результаты
 		a.Error(err)
 		a.Equal(employee.Response{}, got)
-		a.Equal("employee not found", err.Error())
+		a.Equal("error finding employee with id 1: employee not found", err.Error())
 	})
 }
