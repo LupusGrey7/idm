@@ -15,10 +15,10 @@ func NewFixtureRole(roles *role.Repository) *FixtureRole {
 }
 
 // Role создает тестовую роль
-func (f *FixtureRole) Role(name string, employeeId *int64) int64 {
+func (f *FixtureRole) Role(name string, employeeID *int64) int64 {
 	roleEntity := role.Entity{
 		Name:       name,
-		EmployeeID: employeeId,
+		EmployeeID: employeeID,
 	}
 
 	var result, err = f.role.CreateRole(roleEntity)
