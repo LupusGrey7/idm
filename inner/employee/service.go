@@ -140,7 +140,7 @@ func (svc *Service) CreateEmployeeTx(entity *Entity) (employee Response, err err
 	if err != nil {
 		return Response{}, fmt.Errorf("error finding Employee by Name: %s, %w", entity.Name, err)
 	}
-	if isExistsEmployee != true {
+	if !isExistsEmployee {
 		createdEmployee, err = svc.repo.CreateEntityTx(tx, entity)
 	}
 	if err != nil {

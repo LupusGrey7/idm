@@ -53,7 +53,7 @@ func (f *FixtureEmployee) EmployeeTx(name string) (int64, error) {
 
 	isExist, err := f.employees.FindByNameTx(tx, employeeEntity.Name)
 	if err != nil {
-		fmt.Errorf("employee with name %s not exists", employeeEntity.Name)
+		panic(err)
 	}
 
 	if isExist {
