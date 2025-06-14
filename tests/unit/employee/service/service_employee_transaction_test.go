@@ -56,7 +56,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 
 		//---/
 		mock.ExpectBegin()
-		mock.ExpectQuery("select exists(select 1 from employee where name = $1)").
+		mock.ExpectQuery("select exists(select 1 from employees where name = $1)").
 			WithArgs("John Sena").
 			WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 		mock.ExpectQuery("INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *").

@@ -50,7 +50,7 @@ func (r *Repository) FindById(id int64) (employee Entity, err error) {
 func (r *Repository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
 	err = tx.Get(
 		&isExists,
-		"select exists(select 1 from employee where name = $1)",
+		"select exists(select 1 from employees where name = $1)",
 		name,
 	)
 	return isExists, err
