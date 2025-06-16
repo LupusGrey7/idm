@@ -76,7 +76,7 @@ func (r *Repository) CreateEmployee(entity *Entity) (employee Entity, err error)
 	return employee, err
 }
 
-// UPDATE - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
+// UpdateEmployee - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
 func (r *Repository) UpdateEmployee(entity *Entity) error {
 	_, err := r.db.Exec(
 		"UPDATE employees SET name = $1, updated_at = $2 WHERE id = $3",

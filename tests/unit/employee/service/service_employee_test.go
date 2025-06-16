@@ -230,7 +230,7 @@ func TestEmployeeService(t *testing.T) {
 		// Настройка возврата, Настраиваем мок. Обратить внимание - ожидаем указатель!
 		repo.On("CreateEmployee", entityRequest).Return(expectedEntity, nil)
 
-		responses, err := service.Create(entityRequest)
+		responses, err := service.CreateEmployee(entityRequest)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedResponses, responses)

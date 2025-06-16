@@ -55,6 +55,11 @@ func (svc *Service) FindAll() ([]Response, error) {
 }
 
 func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
+	request := FindAllByIdsRequest{IDs: ids}                // Создаем DTO для валидации
+	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
+		return []Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
 	entities, err := svc.repo.FindAllEmployeesByIds(ids)
 	if err != nil {
 		return nil, fmt.Errorf("error finding employees: %w", err)
@@ -69,6 +74,13 @@ func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 }
 
 func (svc *Service) FindById(id int64) (Response, error) {
+	request := FindByIDRequest{ID: id}        // Создаем DTO для валидации
+	var err = svc.validator.Validate(request) // Валидируем запрос
+	if err != nil {
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
 	entity, err := svc.repo.FindById(id)
 	if err != nil {
 		// в случае ошибки, вернём пустую структуру Response и обёрнутую нами ошибку
@@ -79,7 +91,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	return entity.ToResponse(), nil
 }
 
-func (svc *Service) Create(entity *Entity) (Response, error) {
+func (svc *Service) CreateEmployee(entity *Entity) (Response, error) {
 	var entityRsl, err = svc.repo.CreateEmployee(entity)
 	if err != nil {
 		return Response{}, fmt.Errorf("error creating employee with name %s: %w", entity.Name, err)
@@ -107,6 +119,13 @@ func (svc *Service) DeleteById(id int64) (Response, error) {
 }
 
 func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
+	request := DeleteByIdsRequest{IDs: ids}           // Создаем DTO для валидации
+	var errValidate = svc.validator.Validate(request) // Валидируем запрос
+	if errValidate != nil {
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return Response{}, common.RequestValidationError{Message: errValidate.Error()}
+	}
+
 	var err = svc.repo.DeleteAllEmployeesByIds(ids)
 	if err != nil {
 		return Response{}, fmt.Errorf("error deleting employees by IDs: %d, %w", ids, err)

@@ -2,10 +2,17 @@ package web
 
 import "github.com/gofiber/fiber"
 
+const (
+	APIPrefix     = "/api"
+	APIVersion    = "/v1"
+	EmployeesPath = "/employees"
+)
+
 // Server - Cтруктура веб-сервера
 type Server struct {
-	App        *fiber.App
-	GroupApiV1 fiber.Router
+	App            *fiber.App
+	GroupApiV1     fiber.Router
+	GroupEmployees fiber.Router
 }
 
 // NewServer - функция-конструктор
@@ -15,12 +22,16 @@ func NewServer() *Server {
 	app := fiber.New()
 
 	// создаём группу "/api" - Group is used for Routes
-	groupApi := app.Group("/api")
+	groupApi := app.Group(APIPrefix)
 
 	// создаём подгруппу "api/v1"
-	groupApiV1 := groupApi.Group("/v1")
+	groupApiV1 := groupApi.Group(APIVersion)
+	// создаём подгруппу "/employees"
+	groupEmployees := groupApiV1.Group(EmployeesPath)
+
 	return &Server{
-		App:        app,
-		GroupApiV1: groupApiV1,
+		App:            app,
+		GroupApiV1:     groupApiV1,
+		GroupEmployees: groupEmployees,
 	}
 }
