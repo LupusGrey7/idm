@@ -2,9 +2,9 @@ package employee
 
 import (
 	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"idm/inner/common"
-	_ "idm/inner/validator"
 )
 
 type Service struct {
@@ -19,7 +19,7 @@ type Repo interface {
 	FindAllEmployeesByIds(ids []int64) ([]Entity, error)
 	FindByNameTx(tx *sqlx.Tx, name string) (bool, error)
 	CreateEmployee(entity *Entity) (Entity, error)
-	CreateEntityTx(tx *sqlx.Tx, entity Entity) (int64, error)
+	CreateEntityTx(tx *sqlx.Tx, entity *Entity) (int64, error)
 	UpdateEmployee(entity *Entity) error
 	DeleteEmployeeById(id int64) error
 	DeleteAllEmployeesByIds(ids []int64) error
@@ -30,10 +30,7 @@ type Validator interface {
 }
 
 // NewService - функция-конструктор
-func NewService(
-	repo Repo,
-	validator Validator,
-) *Service {
+func NewService(repo Repo, validator Validator) *Service {
 	return &Service{
 		repo:      repo,
 		validator: validator,
@@ -91,26 +88,45 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	return entity.ToResponse(), nil
 }
 
-func (svc *Service) CreateEmployee(entity *Entity) (Response, error) {
-	var entityRsl, err = svc.repo.CreateEmployee(entity)
+func (svc *Service) CreateEmployee(createRequest CreateRequest) (Response, error) {
+	// Создаем DTO для валидации
+	if err := svc.validator.Validate(createRequest); err != nil { // Валидируем запрос
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
+	var toEntity = createRequest.ToEntity()
+	var entityRsl, err = svc.repo.CreateEmployee(toEntity)
 	if err != nil {
-		return Response{}, fmt.Errorf("error creating employee with name %s: %w", entity.Name, err)
+		return Response{}, fmt.Errorf("error creating employee with name %s: %w", createRequest.Name, err)
 	}
 
 	return entityRsl.ToResponse(), nil
 }
 
-func (svc *Service) Update(entity *Entity) (Response, error) {
-	var err = svc.repo.UpdateEmployee(entity)
-	if err != nil {
-		return Response{}, fmt.Errorf("error updating employee with name %s: %w", entity.Name, err)
+func (svc *Service) UpdateEmployee(id int64, request UpdateRequest) (Response, error) {
+	// Создаем DTO для валидации
+	request.Id = id                                         // <- Устанавливаем ID в запросе
+	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
+		return Response{}, common.RequestValidationError{Message: err.Error()}
 	}
 
-	return entity.ToResponse(), nil // <- Преобразуем Entity в Response
+	var employeeEntity = request.ToEntity()
+	var err = svc.repo.UpdateEmployee(employeeEntity)
+	if err != nil {
+		return Response{}, fmt.Errorf("error updating employee with name %s: %w", employeeEntity.Name, err)
+	}
+
+	return employeeEntity.ToResponse(), nil // <- Преобразуем Entity в Response
 }
 
 func (svc *Service) DeleteById(id int64) (Response, error) {
-	var err = svc.repo.DeleteEmployeeById(id)
+	requestId := DeleteByIdRequest{ID: id}
+	var err = svc.validator.Validate(requestId)
+	if err != nil {
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
+	err = svc.repo.DeleteEmployeeById(id)
 	if err != nil {
 		return Response{}, fmt.Errorf("error delete employee by ID: %d, %w", id, err)
 	}
@@ -144,7 +160,7 @@ func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
 	tx, err := svc.repo.BeginTransaction() // create Tx for using
 
 	// отложенная функция завершения транзакции
-	svc.closeTx(tx, err, "Creating")
+	svc.CloseTx(tx, err, "Creating")
 
 	if err != nil {
 		return 0, fmt.Errorf("error create employee:  error creating transaction: %w", err)
@@ -160,6 +176,7 @@ func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
 			fmt.Sprintf("employee with name %s already exists", request.Name),
 		}
 	}
+
 	var entity = request.ToEntity()
 	createdEmployeeId, err := svc.repo.CreateEntityTx(tx, entity)
 	if err != nil {
@@ -172,7 +189,7 @@ func (svc *Service) FindEmployeeByNameTx(name string) (isExists bool, err error)
 	tx, err := svc.repo.BeginTransaction() // create Tx for using
 
 	// отложенная функция завершения транзакции
-	svc.closeTx(tx, err, "Finding")
+	svc.CloseTx(tx, err, "Finding")
 
 	if err != nil {
 		return false, fmt.Errorf("error finding transaction: %w", err)
@@ -186,7 +203,7 @@ func (svc *Service) FindEmployeeByNameTx(name string) (isExists bool, err error)
 }
 
 // Отложенная функция завершения транзакции
-func (svc *Service) closeTx(tx *sqlx.Tx, err error, value string) {
+func (svc *Service) CloseTx(tx *sqlx.Tx, err error, value string) {
 	// отложенная функция завершения транзакции
 	defer func() {
 		// проверяем, не было ли паники

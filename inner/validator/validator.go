@@ -9,8 +9,7 @@ type Validator struct {
 	validate *validator.Validate
 }
 
-// NewValidator - функция-конструктор
-func NewValidator() *Validator {
+func New() *Validator {
 	validate := validator.New()
 	return &Validator{validate: validate}
 }

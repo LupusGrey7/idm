@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"idm/inner/employee"
-	"idm/inner/validator"
+	"idm/tests/unit/mocks"
 	"testing"
 	"time"
 )
@@ -15,7 +15,7 @@ import (
 func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 
 	var a = assert.New(t)          // создаём экземпляр объекта с ассерт-функциями
-	db, mock, err := sqlmock.New() // Создаем mock DB
+	db, mock, err := sqlmock.New() // Создаем mocks DB
 	require.NoError(t, err)
 	defer db.Close()
 
@@ -26,17 +26,17 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	t.Run("when success create Employee using Trx", func(t *testing.T) {
 		// Arrange
 		repo := employee.NewRepository(sqlxDB)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 		now := time.Now()
-		//db, mock, err := sqlmock.New()
+		//db, mocks, err := sqlmock.New()
 
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 		}
 		defer db.Close()
 
-		//// Создаем mock транзакции
+		//// Создаем mocks транзакции
 		//mockTx := &sqlx.Tx{
 		//	Tx: &sql.Tx{}, // Только базовый Tx
 		//}
@@ -55,7 +55,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 		//	UpdatedAt: entityRequest.UpdatedAt,
 		//}
 
-		entityRequest := employee.CreateRequest{Name: "John Sena"}
+		entityRequest := &employee.CreateRequest{Name: "John Sena"}
 
 		//---/
 		mock.ExpectBegin()
@@ -73,14 +73,14 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 		//---//
 
 		// 5. Вызов метода
-		result, err := service.CreateEmployeeTx(entityRequest)
+		result, err := service.CreateEmployeeTx(*entityRequest)
 
 		// 6. Проверки
 		a.NoError(err)
 		//require.NoError(t, err)
 		require.NotNil(t, result)
 		//require.Equal(t, int64(1), result.Id)
-		//require.NoError(t, mock.ExpectationsWereMet())
+		//require.NoError(t, mocks.ExpectationsWereMet())
 		// we make sure that all expectations were met
 		if err := mock.ExpectationsWereMet(); err != nil {
 			t.Errorf("there were unfulfilled expectations: %s", err)
@@ -90,7 +90,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		// Arrange
 		repo := new(MockRepo)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 
 		now := time.Now()
@@ -125,7 +125,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//   - не удалось создать транзакцию
 	t.Run("should return error when transaction creation fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 
 		// Подготавливаем тестовые данные
@@ -148,7 +148,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	// Ошибка при проверке наличия работника
 	t.Run("should return error when employee check fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil) // nil указатель правильного типа
@@ -168,7 +168,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//Работник уже существует
 	t.Run("should return error when employee already exists", func(t *testing.T) {
 		repo := new(MockRepo)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil)
@@ -187,7 +187,7 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	//Ошибка при создании работника
 	t.Run("should return error when employee creation fails", func(t *testing.T) {
 		repo := new(MockRepo)
-		validator := validator.Validator{}
+		validator := new(mocks.MockValidator)
 		service := employee.NewService(repo, validator)
 		entityRequest := employee.CreateRequest{Name: "John Sena"}
 		tx := (*sqlx.Tx)(nil)

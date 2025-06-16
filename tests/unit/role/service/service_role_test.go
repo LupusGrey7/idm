@@ -167,7 +167,7 @@ func TestRoleService(t *testing.T) {
 		mockRepo.On("CreateRole", entityRequest).Return(expectedRole, nil) // Задаем ожидаемое поведение мок-репозитория
 
 		// Act - вызываем метод сервиса
-		result, err := service.Create(entityRequest)
+		result, err := service.CreateRole(entityRequest)
 
 		// Assert - проверяем результат
 		a.Nil(err)

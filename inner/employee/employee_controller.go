@@ -21,13 +21,13 @@ type Svc interface {
 	FindAll() ([]Response, error)
 	FindById(id int64) (Response, error)
 	FindAllByIds(ids []int64) ([]Response, error)
-	CreateEmployee(request CreateRequest) (int64, error)
-	CreateEmployeeTx(request Entity) (int64, error)
-	Update(entity *Entity) (Response, error)
+	CreateEmployee(request CreateRequest) (Response, error)
+	CreateEmployeeTx(request CreateRequest) (int64, error)
+	UpdateEmployee(id int64, request UpdateRequest) (Response, error)
 	DeleteById(id int64) (Response, error)
 	DeleteByIds(ids []int64) (Response, error)
 	FindEmployeeByNameTx(name string) (bool, err error)
-	closeTx(*sqlx.Tx, error, string)
+	CloseTx(*sqlx.Tx, error, string)
 }
 
 // NewController - функция-конструктор
@@ -45,7 +45,7 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupEmployees.Get("/ids", c.FindAllByIds)
 	c.server.GroupEmployees.Get("/:id", c.FindById)
 	c.server.GroupEmployees.Post("/", c.CreateEmployee)
-	c.server.GroupEmployees.Post("/employees", c.CreateEmployeeTx)
+	c.server.GroupEmployees.Post("/employee", c.CreateEmployeeTx)
 	c.server.GroupEmployees.Put("/:id", c.Update)
 	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
 	c.server.GroupEmployees.Delete("/:id", c.DeleteById)
@@ -115,7 +115,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) {
 		}
 		return
 	}
-
+	fmt.Printf("Service response: %+v, error: %v\n", response, err)
 	// функция OkResponse() формирует и направляет ответ в случае успеха
 	if err = common.OkResponse(ctx, response); err != nil {
 
@@ -164,7 +164,7 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
 		return
 	}
 
-	// Конвертируем в массив чисел - TODO duplicate
+	// Конвертируем в массив чисел
 	var ids []int64
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -218,10 +218,8 @@ func (c *Controller) Update(ctx *fiber.Ctx) {
 		return
 	}
 
-	var employeeEntity = request.ToEntity()
-	employeeEntity.Id = employeeID
 	// вызываем метод CreateEmployee сервиса employee.Service
-	var updatedEmployee, err = c.employeeService.Update(employeeEntity)
+	var updatedEmployee, err = c.employeeService.UpdateEmployee(employeeID, request)
 	if err != nil {
 		switch {
 
@@ -326,11 +324,6 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
 
 	return
 }
-
-// TODO
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) {
-	return
-}
-func (c *Controller) FindEmployeeByNameTx(ctx *fiber.Ctx) {
 	return
 }

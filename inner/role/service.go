@@ -2,10 +2,12 @@ package role
 
 import (
 	"fmt"
+	"idm/inner/common"
 )
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
 type Repo interface {
@@ -17,11 +19,15 @@ type Repo interface {
 	DeleteRoleById(id int64) error
 	DeleteAllRolesByIds(ids []int64) error
 }
+type Validator interface {
+	Validate(request any) error
+}
 
 // NewService - функция-конструктор
-func NewService(repo Repo) *Service {
+func NewService(repo Repo, validator Validator) *Service {
 	return &Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
 }
 
@@ -41,6 +47,11 @@ func (svc *Service) FindAll() ([]Response, error) {
 
 // FindAllByIds - найти слайс элементов коллекции по слайсу их id
 func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
+	request := FindAllByIdsRequest{IDs: ids}                // Создаем DTO для валидации
+	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
+		return []Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
 	var roles, err = svc.repo.FindAllRolesByIds(ids)
 	if err != nil {
 		return nil, fmt.Errorf("error find all Roles with IDs: %d %w", ids, err)
@@ -55,6 +66,13 @@ func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 }
 
 func (svc *Service) FindById(id int64) (Response, error) {
+	request := FindByIDRequest{ID: id}        // Создаем DTO для валидации
+	var err = svc.validator.Validate(request) // Валидируем запрос
+	if err != nil {
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
 	entity, err := svc.repo.FindById(id)
 	if err != nil {
 		// в случае ошибки, вернём пустую структуру Response и обёрнутую нами ошибку
@@ -65,17 +83,33 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	return entity.ToResponse(), nil
 }
 
-func (svc *Service) Create(entity *Entity) (Response, error) {
-	var entityRsl, err = svc.repo.CreateRole(entity)
+func (svc *Service) CreateRole(request CreateRequest) (Response, error) {
+	//validate
+	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
-		return Response{}, fmt.Errorf("error creating Role with name %s: %w", entity.Name, err)
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
+	//save
+	entityRole := request.ToEntity()
+	entityRsl, err := svc.repo.CreateRole(entityRole)
+	if err != nil {
+		return Response{}, fmt.Errorf("error creating Role with name %s: %w", entityRole.Name, err)
 	}
 
 	return entityRsl.ToResponse(), nil
 }
 
-func (svc *Service) Update(entity *Entity) (Response, error) {
-	var err = svc.repo.UpdateRole(entity)
+func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error) {
+	request.Id = id
+	var err = svc.validator.Validate(request)
+	if err != nil {
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
+	entity := request.ToEntity()
+	err = svc.repo.UpdateRole(entity)
 	if err != nil {
 		return Response{}, fmt.Errorf("error updating Role with name %s: %w", entity.Name, err)
 	}
@@ -84,7 +118,12 @@ func (svc *Service) Update(entity *Entity) (Response, error) {
 }
 
 func (svc *Service) DeleteById(id int64) (Response, error) {
-	var err = svc.repo.DeleteRoleById(id)
+	requestId := DeleteByIdRequest{ID: id}
+	var err = svc.validator.Validate(requestId)
+	if err != nil {
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+	err = svc.repo.DeleteRoleById(id)
 	if err != nil {
 		return Response{}, fmt.Errorf("error delete Role by ID: %d, %w", id, err)
 	}
@@ -93,7 +132,13 @@ func (svc *Service) DeleteById(id int64) (Response, error) {
 }
 
 func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
-	var err = svc.repo.DeleteAllRolesByIds(ids)
+	requestIds := DeleteByIdsRequest{IDs: ids}
+	var err = svc.validator.Validate(requestIds)
+	if err != nil {
+		return Response{}, common.RequestValidationError{Message: err.Error()}
+	}
+
+	err = svc.repo.DeleteAllRolesByIds(ids)
 	if err != nil {
 		return Response{}, fmt.Errorf("error deleting Roles by IDs: %d, %w", ids, err)
 	}
