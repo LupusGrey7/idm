@@ -56,7 +56,7 @@ func (m *MockService) FindEmployeeByNameTx(name string) (bool, err error) {
 	panic("implement me")
 }
 
-func (m *MockService) closeTx(tx *sqlx.Tx, err error, s string) {
+func (m *MockService) CloseTx(tx *sqlx.Tx, err error, s string) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -108,7 +108,14 @@ func TestEmployeeController_FindById(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/v1/employees/1", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				if err != nil {
+					t.Errorf("Error closing response body: %v", err)
+				}
+			}
+		}(resp.Body)
 
 		// 5. Проверка сырого ответа
 		body, _ := io.ReadAll(resp.Body)
