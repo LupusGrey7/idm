@@ -123,8 +123,6 @@ func (c *Controller) FindById(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning employee by ID")
 		return
 	}
-
-	return
 }
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) {
@@ -153,8 +151,6 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All employees")
 		return
 	}
-
-	return
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
@@ -198,8 +194,6 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All employees")
 		return
 	}
-
-	return
 }
 
 func (c *Controller) Update(ctx *fiber.Ctx) {
@@ -243,8 +237,8 @@ func (c *Controller) Update(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
 		return
 	}
-	return
 }
+
 func (c *Controller) DeleteById(ctx *fiber.Ctx) {
 	idStr := ctx.Params("id")
 	employeeID, errConv := strconv.ParseInt(idStr, 10, 64)
@@ -277,9 +271,8 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
 		return
 	}
-
-	return
 }
+
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
 	idsParam := ctx.Query("ids") //query параметр ?ids=1,2,3
 	if idsParam == "" {
@@ -321,9 +314,6 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning deleting All employees")
 		return
 	}
-
-	return
 }
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) {
-	return
 }

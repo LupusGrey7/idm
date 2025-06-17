@@ -73,8 +73,6 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All roles")
 		return
 	}
-
-	return
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) {
@@ -104,8 +102,6 @@ func (c *Controller) FindById(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning employee by ID")
 		return
 	}
-
-	return
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
@@ -149,8 +145,6 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All roles")
 		return
 	}
-
-	return
 }
 
 // CreateRole - функция-хендлер, которая будет вызываться при POST запросе по маршруту "/api/v1/roles"
@@ -228,7 +222,6 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
 		return
 	}
-	return
 }
 
 func (c *Controller) DeleteById(ctx *fiber.Ctx) {
@@ -264,8 +257,6 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
 		return
 	}
-
-	return
 }
 
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
@@ -309,6 +300,4 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning deleting All roles")
 		return
 	}
-
-	return
 }

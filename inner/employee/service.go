@@ -173,7 +173,7 @@ func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
 	}
 	if isExist {
 		return 0, common.AlreadyExistsError{
-			fmt.Sprintf("employee with name %s already exists", request.Name),
+			Message: fmt.Sprintf("employee with name %s already exists", request.Name),
 		}
 	}
 

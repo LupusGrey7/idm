@@ -39,7 +39,7 @@ func (req *CreateRequest) ToEntity() *Entity {
 }
 
 type UpdateRequest struct {
-	Id         int64     `json:"id" validate:"required,min=1,max=2147483647`
+	Id         int64     `json:"id" validate:"required,min=1,max=2147483647"`
 	EmployeeID *int64    `json:"employeeID" validate:"required,min=1,max=2147483647"` // fixme?
 	Name       string    `json:"name" validate:"required,min=2,max=155"`
 	CreatedAt  time.Time `json:"createdAt" validate:"required"`
