@@ -2,10 +2,10 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"idm/inner/role"
+	"idm/tests/unit/mocks"
 	"testing"
 	"time"
 )
@@ -55,11 +55,14 @@ func TestRoleService(t *testing.T) {
 	var a = assert.New(t)
 
 	t.Run("when should return All Roles by IDs", func(t *testing.T) {
-		now := time.Now()                    // Создаем текущее время
-		mockRepo := new(MockRepo)            // Создаем мок-репозиторий
-		service := role.NewService(mockRepo) // Создаем сервис с мок-репозиторием
-		roleIDs := []int64{1, 2, 3}          // Создаем список идентификаторов ролей
-		roles := []role.Entity{              // Создаем список ролей
+		now := time.Now()                               // Создаем текущее время
+		mockRepo := new(MockRepo)                       // Создаем мок-репозиторий
+		validator := new(mocks.MockValidator)           //
+		service := role.NewService(mockRepo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		roleIDs := []int64{1, 2, 3}                     // Создаем список идентификаторов ролей
+		var validateR = role.FindAllByIdsRequest{IDs: roleIDs}
+
+		roles := []role.Entity{ // Создаем список ролей
 			{Id: 1, Name: "Admin", EmployeeID: nil, CreatedAt: now, UpdatedAt: now},
 			{Id: 2, Name: "User", EmployeeID: nil, CreatedAt: now, UpdatedAt: now},
 			{Id: 3, Name: "Guest", EmployeeID: nil, CreatedAt: now, UpdatedAt: now},
@@ -71,6 +74,7 @@ func TestRoleService(t *testing.T) {
 		}
 
 		// Задаем ожидаемое поведение мок-репозитория
+		validator.On("Validate", validateR).Return(nil)
 		mockRepo.On("FindAllRolesByIds", roleIDs).Return(roles, nil)
 
 		// Act - вызываем метод сервиса
@@ -86,11 +90,14 @@ func TestRoleService(t *testing.T) {
 
 	t.Run("when should return error when failed to get roles", func(t *testing.T) {
 
-		mockRepo := new(MockRepo)                      // Создаем мок-репозиторий
-		service := role.NewService(mockRepo)           // Создаем сервис с мок-репозиторием
-		roleIDs := []int64{1, 2, 3}                    // Создаем список идентификаторов ролей
+		mockRepo := new(MockRepo)                       // Создаем мок-репозиторий
+		validator := new(mocks.MockValidator)           //
+		service := role.NewService(mockRepo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		roleIDs := []int64{1, 2, 3}                     // Создаем список идентификаторов ролей
+		var validateR = role.FindAllByIdsRequest{IDs: roleIDs}
 		var expectedErr = errors.New("database error") // ошибка, которую вернёт репозиторий
 
+		validator.On("Validate", validateR).Return(nil)
 		mockRepo.On("FindAllRolesByIds", roleIDs).Return([]role.Entity{}, expectedErr) // Задаем ожидаемое поведение мок-репозитория
 
 		// Act - вызываем метод сервиса
@@ -103,9 +110,10 @@ func TestRoleService(t *testing.T) {
 	})
 
 	t.Run("when should return All founded Roles", func(t *testing.T) {
-		mockRepo := new(MockRepo)            // Создаем мок-репозиторий
-		service := role.NewService(mockRepo) // Создаем сервис с мок-репозиторием
-		roles := []role.Entity{              // Создаем список ролей
+		mockRepo := new(MockRepo)                       // Создаем мок-репозиторий
+		validator := new(mocks.MockValidator)           //
+		service := role.NewService(mockRepo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		roles := []role.Entity{                         // Создаем список ролей
 			{Id: 1, Name: "Admin"},
 			{Id: 2, Name: "User"},
 			{Id: 3, Name: "Guest"},
@@ -130,7 +138,8 @@ func TestRoleService(t *testing.T) {
 	})
 	t.Run("when should return error when failed to get roles", func(t *testing.T) {
 		mockRepo := new(MockRepo)                                        // Создаем мок-репозиторий
-		service := role.NewService(mockRepo)                             // Создаем сервис с мок-репозиторием
+		validator := new(mocks.MockValidator)                            //
+		service := role.NewService(mockRepo, validator)                  // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 		want := errors.New("failed to get roles")                        // Создаем ошибку
 		mockRepo.On("FindAllRoles").Return(make([]role.Entity, 0), want) // Задаем ожидаемое поведение мок-репозитория
 
@@ -145,15 +154,15 @@ func TestRoleService(t *testing.T) {
 	})
 	t.Run("when should create Role", func(t *testing.T) {
 		now := time.Now()
-		mockRepo := new(MockRepo)            // Создаем мок-репозиторий
-		service := role.NewService(mockRepo) // Создаем сервис с мок-репозиторием
+		var repo = new(MockRepo)
+		validator := new(mocks.MockValidator)       //
+		service := role.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 		//	want := errors.New("failed to get roles") // Создаем ошибку
-		entityRequest := &role.Entity{ // request
-			Name:       "Admin",
-			EmployeeID: nil,
-			CreatedAt:  now,
-			UpdatedAt:  now,
+
+		entityRequest := role.CreateRequest{ // request
+			Name: "Admin",
 		}
+
 		expectedRole := role.Entity{ // Создаем роль
 			Id:         1,
 			Name:       "Admin",
@@ -162,9 +171,11 @@ func TestRoleService(t *testing.T) {
 			UpdatedAt:  now,
 		}
 
+		expectedEntity := entityRequest.ToEntity()
 		expectedResponses := expectedRole.ToResponse()
 
-		mockRepo.On("CreateRole", entityRequest).Return(expectedRole, nil) // Задаем ожидаемое поведение мок-репозитория
+		validator.On("Validate", entityRequest).Return(nil)
+		repo.On("CreateRole", expectedEntity).Return(expectedRole, nil) // Задаем ожидаемое поведение мок-репозитория
 
 		// Act - вызываем метод сервиса
 		result, err := service.CreateRole(entityRequest)
@@ -173,41 +184,52 @@ func TestRoleService(t *testing.T) {
 		a.Nil(err)
 		a.NotEmpty(result)
 		a.EqualValues(expectedResponses, result)
-		a.True(mockRepo.AssertNumberOfCalls(t, "CreateRole", 1))
-		mockRepo.AssertExpectations(t) // проверяем что были вызваны все объявленные ожидания
+		a.True(repo.AssertNumberOfCalls(t, "CreateRole", 1))
+		repo.AssertExpectations(t) // проверяем что были вызваны все объявленные ожидания
 	})
 	t.Run("when success update Role", func(t *testing.T) {
 		now := time.Now()
-		mockRepo := new(MockRepo)            // Создаем мок-репозиторий
-		service := role.NewService(mockRepo) // Создаем сервис с мок-репозиторием
+		mockRepo := new(MockRepo)                       // Создаем мок-репозиторий
+		validator := new(mocks.MockValidator)           //
+		service := role.NewService(mockRepo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
 		var empID = int64(1)
-		entityRequest := &role.Entity{ // request
+		entityRequest := role.UpdateRequest{ // request
 			Id:         1,
 			Name:       "Admin",
 			EmployeeID: &empID,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		}
-		want := errors.New("failed to get roles")
-		errR := fmt.Errorf("error updating Role with name %s: %w", entityRequest.Name, want)
+		//want := errors.New("failed to get roles")
+		//	errR := fmt.Errorf("error updating Role with name %s: %w", entityRequest.Name, want)
 
-		mockRepo.On("UpdateRole", entityRequest).Return(nil, errR) // Задаем ожидаемое поведение мок-репозитория
+		expectedEntity := entityRequest.ToEntity()
+		expectedResponse := expectedEntity.ToResponse()
+
+		validator.On("Validate", entityRequest).Return(nil)
+		mockRepo.On("UpdateRole", expectedEntity).Return(nil) // Задаем ожидаемое поведение мок-репозитория
 		// Act - вызываем метод сервиса
-		result, err := service.Update(entityRequest)
+		result, err := service.UpdateRole(empID, entityRequest)
 
 		// Assert - проверяем результат
 		a.Nil(err)
 		a.NotNil(result)
+		a.Equal(expectedResponse.Name, result.Name)
 		a.True(mockRepo.AssertNumberOfCalls(t, "UpdateRole", 1))
 	})
 	t.Run("when delete Role by ID", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var service = role.NewService(repo)
-		var err = error(nil) // ошибка, которую вернёт репозиторий
+		validator := new(mocks.MockValidator)       //
+		service := role.NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		var err = error(nil)                        // ошибка, которую вернёт репозиторий
+		var empID = int64(1)
+		var requestId = role.DeleteByIdRequest{ID: empID}
+
 		var responseRsl = role.Response{}
 
-		repo.On("DeleteRoleById", int64(1)).Return(err)
+		validator.On("Validate", requestId).Return(nil)
+		repo.On("DeleteRoleById", empID).Return(err)
 
 		// Act - вызываем метод сервиса
 		var rsl, got = service.DeleteById(1)

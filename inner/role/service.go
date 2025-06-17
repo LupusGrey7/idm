@@ -114,7 +114,7 @@ func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error
 		return Response{}, fmt.Errorf("error updating Role with name %s: %w", entity.Name, err)
 	}
 
-	return Response{}, err
+	return entity.ToResponse(), err
 }
 
 func (svc *Service) DeleteById(id int64) (Response, error) {
