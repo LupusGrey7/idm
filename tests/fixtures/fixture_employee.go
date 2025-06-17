@@ -65,7 +65,7 @@ func (f *FixtureEmployee) EmployeeTx(name string) (int64, error) {
 	}
 	fmt.Printf("Employee --> : %v", result)
 
-	return result.Id, err
+	return result, err
 }
 
 // EmployeeUpdate - Entity создает сущность сотрудника для обновления
