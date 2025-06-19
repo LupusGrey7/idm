@@ -1,4 +1,4 @@
-package common
+package config
 
 import (
 	"github.com/joho/godotenv"
@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// Config общая конфигурация всего приложения
+// Config - общая конфигурация всего приложения для БД
 type Config struct {
 	DbDriverName string `validate:"required"`
 	Dsn          string `validate:"required"`

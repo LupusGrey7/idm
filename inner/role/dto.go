@@ -40,14 +40,20 @@ func (req *CreateRequest) ToEntity() *Entity {
 
 type UpdateRequest struct {
 	Id         int64     `json:"id" validate:"required,min=1,max=2147483647"`
-	EmployeeID *int64    `json:"employeeID" validate:"required,min=1,max=2147483647"` // fixme?
+	EmployeeID *int64    `json:"employeeID" validate:"required,min=1,max=2147483647"`
 	Name       string    `json:"name" validate:"required,min=2,max=155"`
 	CreatedAt  time.Time `json:"createdAt" validate:"required"`
 	UpdatedAt  time.Time `json:"updatedAt" validate:"required"`
 }
 
 func (req *UpdateRequest) ToEntity() *Entity {
-	return &Entity{Id: req.Id, EmployeeID: req.EmployeeID, Name: req.Name, CreatedAt: req.CreatedAt, UpdatedAt: req.UpdatedAt}
+	return &Entity{
+		Id:         req.Id,
+		EmployeeID: req.EmployeeID,
+		Name:       req.Name,
+		CreatedAt:  req.CreatedAt,
+		UpdatedAt:  req.UpdatedAt,
+	}
 }
 
 type UpdateByIDRequest struct {

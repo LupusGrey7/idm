@@ -1,6 +1,8 @@
 package web
 
-import "github.com/gofiber/fiber"
+import (
+	"github.com/gofiber/fiber/v2"
+)
 
 const (
 	APIPrefix     = "/api"

@@ -2,7 +2,7 @@ package role
 
 import (
 	"fmt"
-	"idm/inner/common"
+	"idm/inner/pkg/domain"
 )
 
 type Service struct {
@@ -49,7 +49,7 @@ func (svc *Service) FindAll() ([]Response, error) {
 func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 	request := FindAllByIdsRequest{IDs: ids}                // Создаем DTO для валидации
 	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
-		return []Response{}, common.RequestValidationError{Message: err.Error()}
+		return []Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	var roles, err = svc.repo.FindAllRolesByIds(ids)
@@ -70,7 +70,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	entity, err := svc.repo.FindById(id)
@@ -88,7 +88,7 @@ func (svc *Service) CreateRole(request CreateRequest) (Response, error) {
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	//save
@@ -105,7 +105,7 @@ func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error
 	request.Id = id
 	var err = svc.validator.Validate(request)
 	if err != nil {
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	entity := request.ToEntity()
@@ -121,7 +121,7 @@ func (svc *Service) DeleteById(id int64) (Response, error) {
 	requestId := DeleteByIdRequest{ID: id}
 	var err = svc.validator.Validate(requestId)
 	if err != nil {
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 	err = svc.repo.DeleteRoleById(id)
 	if err != nil {
@@ -135,7 +135,7 @@ func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
 	requestIds := DeleteByIdsRequest{IDs: ids}
 	var err = svc.validator.Validate(requestIds)
 	if err != nil {
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	err = svc.repo.DeleteAllRolesByIds(ids)

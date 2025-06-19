@@ -6,8 +6,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"idm/inner/common"
 	"idm/inner/employee"
+	"idm/inner/pkg/domain"
 	"idm/tests/unit/mocks"
 	"testing"
 	"time"
@@ -279,7 +279,7 @@ func TestEmployeeService(t *testing.T) {
 		_, err := service.UpdateEmployee(1, invalidRequest)
 
 		assert.Error(t, err)
-		assert.IsType(t, common.RequestValidationError{}, err)
+		assert.IsType(t, domain.RequestValidationError{}, err)
 		repo.AssertNotCalled(t, "UpdateEmployee")
 		repo.AssertNumberOfCalls(t, "UpdateEmployee", 0)
 	})
@@ -301,7 +301,7 @@ func TestEmployeeService(t *testing.T) {
 		_, err := service.UpdateEmployee(0, invalidRequest)
 
 		assert.Error(t, err)
-		assert.IsType(t, common.RequestValidationError{}, err)
+		assert.IsType(t, domain.RequestValidationError{}, err)
 		repo.AssertNotCalled(t, "UpdateEmployee")
 		repo.AssertNumberOfCalls(t, "UpdateEmployee", 0)
 	})

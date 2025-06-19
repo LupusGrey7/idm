@@ -43,7 +43,12 @@ type UpdateRequest struct {
 }
 
 func (req *UpdateRequest) ToEntity() *Entity {
-	return &Entity{Id: req.Id, Name: req.Name, CreatedAt: req.CreatedAt, UpdatedAt: req.UpdatedAt}
+	return &Entity{
+		Id:        req.Id,
+		Name:      req.Name,
+		CreatedAt: req.CreatedAt,
+		UpdatedAt: req.UpdatedAt,
+	}
 }
 
 type UpdateByIDRequest struct {

@@ -2,9 +2,8 @@ package employee
 
 import (
 	"fmt"
-
 	"github.com/jmoiron/sqlx"
-	"idm/inner/common"
+	"idm/inner/pkg/domain"
 )
 
 type Service struct {
@@ -54,7 +53,8 @@ func (svc *Service) FindAll() ([]Response, error) {
 func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 	request := FindAllByIdsRequest{IDs: ids}                // Создаем DTO для валидации
 	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
-		return []Response{}, common.RequestValidationError{Message: err.Error()}
+		//return []Response{}, error2.RequestValidationError{Message: err.Error()}
+		return []Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	entities, err := svc.repo.FindAllEmployeesByIds(ids)
@@ -75,7 +75,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	entity, err := svc.repo.FindById(id)
@@ -91,7 +91,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 func (svc *Service) CreateEmployee(createRequest CreateRequest) (Response, error) {
 	// Создаем DTO для валидации
 	if err := svc.validator.Validate(createRequest); err != nil { // Валидируем запрос
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	var toEntity = createRequest.ToEntity()
@@ -107,7 +107,7 @@ func (svc *Service) UpdateEmployee(id int64, request UpdateRequest) (Response, e
 	// Создаем DTO для валидации
 	request.Id = id                                         // <- Устанавливаем ID в запросе
 	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	var employeeEntity = request.ToEntity()
@@ -123,7 +123,7 @@ func (svc *Service) DeleteById(id int64) (Response, error) {
 	requestId := DeleteByIdRequest{ID: id}
 	var err = svc.validator.Validate(requestId)
 	if err != nil {
-		return Response{}, common.RequestValidationError{Message: err.Error()}
+		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	err = svc.repo.DeleteEmployeeById(id)
@@ -139,7 +139,7 @@ func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
 	var errValidate = svc.validator.Validate(request) // Валидируем запрос
 	if errValidate != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
-		return Response{}, common.RequestValidationError{Message: errValidate.Error()}
+		return Response{}, domain.RequestValidationError{Message: errValidate.Error()}
 	}
 
 	var err = svc.repo.DeleteAllEmployeesByIds(ids)
@@ -154,7 +154,7 @@ func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию (про кастомные ошибки - дальше)
-		return 0, common.RequestValidationError{Message: err.Error()}
+		return 0, domain.RequestValidationError{Message: err.Error()}
 	}
 
 	tx, err := svc.repo.BeginTransaction() // create Tx for using
@@ -172,7 +172,7 @@ func (svc *Service) CreateEmployeeTx(request CreateRequest) (int64, error) {
 		return 0, fmt.Errorf("error finding Employee by Name: %s, %w", request.Name, err)
 	}
 	if isExist {
-		return 0, common.AlreadyExistsError{
+		return 0, domain.AlreadyExistsError{
 			Message: fmt.Sprintf("employee with name %s already exists", request.Name),
 		}
 	}

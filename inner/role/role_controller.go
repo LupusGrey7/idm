@@ -2,12 +2,21 @@ package role
 
 import (
 	"errors"
-	"fmt"
-	"github.com/gofiber/fiber"
-	"idm/inner/common"
+	"github.com/gofiber/fiber/v2"
+	error2 "idm/inner/pkg/domain"
+	"idm/inner/transport/http"
 	"idm/inner/web"
+	"log"
 	"strconv"
 	"strings"
+)
+
+const (
+	invalidRequestFormat = "Invalid request format"
+	validationFailed     = "Validation failed"
+	internalServerError  = "Internal server error"
+	invalidIDFormat      = "Invalid ID format"
+	invalidRequestBody   = "Invalid request body"
 )
 
 type Controller struct {
@@ -45,259 +54,157 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupEmployees.Delete("/:id", c.DeleteById)
 }
 
-// -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/api/v1/employees" --//
+// -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
-func (c *Controller) FindAll(ctx *fiber.Ctx) {
-
-	// вызываем сервис role.Service
-	var response, err = c.roleService.FindAll()
+func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	response, err := c.roleService.FindAll()
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
-
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, response); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All roles")
-		return
-	}
+	return http.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindById(ctx *fiber.Ctx) {
-	// Анмаршалим path var запроса
+func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
-	roleID, errConv := strconv.ParseInt(idStr, 10, 64)
-	if errConv != nil {
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, errConv.Error())
-		return
+	roleID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	var response, err = c.roleService.FindById(roleID)
+	response, err := c.roleService.FindById(roleID)
 	if err != nil {
 		switch {
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
-
-	if err = common.OkResponse(ctx, response); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning employee by ID")
-		return
-	}
+	return http.OkResponse(ctx, response)
 }
 
-func (c *Controller) FindAllByIds(ctx *fiber.Ctx) {
-	idsParam := ctx.Query("ids") //query параметр ?ids=1,2,3
+func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
+	idsParam := ctx.Query("ids")
 	if idsParam == "" {
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
-		return
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 
-	// Конвертируем в массив чисел
 	var ids []int64
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, "Invalid ID format: "+idStr)
-			return
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat+idStr)
 		}
 		ids = append(ids, id)
 	}
 
-	var response, err = c.roleService.FindAllByIds(ids)
+	response, err := c.roleService.FindAllByIds(ids)
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
 
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, response); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning find All roles")
-		return
-	}
+	return http.OkResponse(ctx, response)
 }
 
-// CreateRole - функция-хендлер, которая будет вызываться при POST запросе по маршруту "/api/v1/roles"
-func (c *Controller) CreateRole(ctx *fiber.Ctx) {
-
-	// Анмаршалим JSON body запроса в структуру CreateRequest
+func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 	var request CreateRequest
 	if err := ctx.BodyParser(&request); err != nil {
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-		return
+		log.Printf("CreateRole: body parse error: %v", err)
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	// вызываем метод сервиса role.Service
-	var newRoleId, err = c.roleService.CreateRole(request)
+	newRoleId, err := c.roleService.CreateRole(request)
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
 
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, newRoleId); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning created role id")
-		return
-	}
+	return http.OkResponse(ctx, newRoleId)
 }
 
-func (c *Controller) UpdateRole(ctx *fiber.Ctx) {
-
+func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
-	employeeID, errConv := strconv.ParseInt(idStr, 10, 64)
-	if errConv != nil {
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, errConv.Error())
-		return
+	roleID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	var request UpdateRequest
-	if err := ctx.BodyParser(&request); err != nil { // Анмаршалим JSON body запроса в структуру CreateRequest
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-		return
+	if err := ctx.BodyParser(&request); err != nil {
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	var updatedEmployee, err = c.roleService.UpdateRole(employeeID, request)
+	updatedRole, err := c.roleService.UpdateRole(roleID, request)
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
 
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, updatedEmployee); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		gotAnsw := fmt.Sprintf("error returning updated role with id %s", idStr)
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
-		return
-	}
+	return http.OkResponse(ctx, updatedRole)
 }
 
-func (c *Controller) DeleteById(ctx *fiber.Ctx) {
+func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
-	roleID, errConv := strconv.ParseInt(idStr, 10, 64)
-	if errConv != nil {
-		//ctx.Status(400).JSON(fiber.Map{"error": "Invalid ID"})
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, errConv.Error())
-		return
+	roleID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	var response, err = c.roleService.DeleteById(roleID)
+	response, err := c.roleService.DeleteById(roleID)
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
 
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, response); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		gotAnsw := fmt.Sprintf("error deleting role by id %s", idStr)
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, gotAnsw)
-		return
-	}
+	return http.OkResponse(ctx, response)
 }
 
-func (c *Controller) DeleteByIds(ctx *fiber.Ctx) {
-	idsParam := ctx.Query("ids") //query параметр ?ids=1,2,3
+func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	idsParam := ctx.Query("ids")
 	if idsParam == "" {
-		_ = common.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
-		return
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 
-	// Конвертируем в массив чисел
 	var ids []int64
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, "Invalid ID format: "+idStr)
-			return
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat+idStr)
 		}
 		ids = append(ids, id)
 	}
 
-	var response, err = c.roleService.DeleteByIds(ids)
+	response, err := c.roleService.DeleteByIds(ids)
 	if err != nil {
 		switch {
-
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
-		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
-			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
+		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
-		return
 	}
 
-	// функция OkResponse() формирует и направляет ответ в случае успеха
-	if err = common.OkResponse(ctx, response); err != nil {
-
-		// функция ErrorResponse() формирует и направляет ответ в случае ошибки
-		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning deleting All roles")
-		return
-	}
+	return http.OkResponse(ctx, response)
 }

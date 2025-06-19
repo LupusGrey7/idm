@@ -1,6 +1,7 @@
-package common
+package domain
 
-//Структуры кастомных ошибок
+//Структуры кастомных ошибок - Доменные ошибки
+//Доменные ошибки отдельно от транспортных
 
 // RequestValidationError - ошибка валидации запроса
 type RequestValidationError struct {

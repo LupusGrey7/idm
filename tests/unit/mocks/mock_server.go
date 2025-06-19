@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/gofiber/fiber"
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/mock"
 	"idm/inner/web"
 )

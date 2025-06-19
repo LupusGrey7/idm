@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"idm/inner/common"
+	"idm/inner/config"
 	"idm/inner/database"
 	_ "os"
 	"testing"
@@ -21,7 +21,7 @@ func TestDatabaseConnection(t *testing.T) {
 
 	// Тест для некорректного подключения с отловом паники + Некорректный конфиг БД
 	t.Run("Invalid connection config", func(t *testing.T) {
-		cfg := common.Config{
+		cfg := config.Config{
 			DbDriverName: "postgres",
 			Dsn:          "postgres://invalid:invalid@localhost:9999/nonexistent?sslmode=disable", // используем заведомо ложные данные
 		}
@@ -49,7 +49,7 @@ func TestDatabaseConnection(t *testing.T) {
 	// Тест для корректного подключения без пароля + Корректный конфиг БД
 	t.Run("Valid connection config", func(t *testing.T) {
 		// Используем тестовую БД в Docker
-		cfg := common.Config{
+		cfg := config.Config{
 			DbDriverName: "postgres",
 			Dsn:          "postgres://test:test@localhost:5434/idm_tests?sslmode=disable", // Параметры из docker-compose
 		}

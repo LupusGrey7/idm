@@ -17,7 +17,10 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 	var a = assert.New(t)          // создаём экземпляр объекта с ассерт-функциями
 	db, mock, err := sqlmock.New() // Создаем mocks DB
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		require.NoError(t, err)
+	}()
 
 	// Обертываем в sqlx
 	sqlxDB := sqlx.NewDb(db, "sqlmock")
@@ -34,7 +37,10 @@ func TestEmployeeServiceCreateEmployeeTx(t *testing.T) {
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 		}
-		defer db.Close()
+		defer func() {
+			err := db.Close()
+			require.NoError(t, err)
+		}()
 
 		//// Создаем mocks транзакции
 		//mockTx := &sqlx.Tx{
