@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 )
@@ -41,8 +42,12 @@ func (s *StubEmployeeRepository) FindAllEmployeesByIds(ids []int64) ([]Entity, e
 }
 
 func (s *StubEmployeeRepository) CreateEmployee(entity *Entity) (Entity, error) {
-	//TODO implement me
-	panic("implement me")
+	return Entity{
+		Id:        1,
+		Name:      entity.Name,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}, nil
 }
 
 func (s *StubEmployeeRepository) UpdateEmployee(entity *Entity) error {
@@ -89,9 +94,9 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 		// Создаём сервис с заглушкой
 		validator := new(MockValidator)        // TODO mocks validator
 		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
-
+		validator.On("Validate", mock.Anything).Return(nil)
 		// Вызываем метод сервиса
-		got, err := service.FindById(1)
+		got, err := service.FindById(int64(1))
 
 		// Проверяем результаты
 		a.NoError(err)
@@ -109,6 +114,7 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 		validator := new(MockValidator)        // TODO mocks validator
 		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
+		validator.On("Validate", mock.Anything).Return(errors.New("error finding employee with id 1: employee not found"))
 		// Вызываем метод сервиса
 		got, err := service.FindById(1)
 
