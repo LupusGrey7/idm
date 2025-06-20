@@ -10,13 +10,13 @@ type MockEmployeeService struct {
 }
 
 func (m *MockEmployeeService) FindAll() ([]Response, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called()
+	return args.Get(0).([]Response), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) FindAllByIds(ids []int64) ([]Response, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called(ids)
+	return args.Get(0).([]Response), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) CreateEmployee(req CreateRequest) (Response, error) {
@@ -25,28 +25,28 @@ func (m *MockEmployeeService) CreateEmployee(req CreateRequest) (Response, error
 }
 
 func (m *MockEmployeeService) CreateEmployeeTx(request CreateRequest) (int64, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called(request)
+	return args.Get(0).(int64), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) UpdateEmployee(id int64, request UpdateRequest) (Response, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called(id, request)
+	return args.Get(0).(Response), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) DeleteById(id int64) (Response, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called(id)
+	return args.Get(0).(Response), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) DeleteByIds(ids []int64) (Response, error) {
-	//TODO implement me
-	panic("implement me")
+	args := m.Called(ids)
+	return args.Get(0).(Response), args.Error(1) // Важно: правильный тип
 }
 
-func (m *MockEmployeeService) FindEmployeeByNameTx(name string) (bool, err error) {
-	//TODO implement me
-	panic("implement me")
+func (m *MockEmployeeService) FindEmployeeByNameTx(name string) (bool, error) {
+	args := m.Called(name)
+	return args.Get(0).(bool), args.Error(1) // Важно: правильный тип
 }
 
 func (m *MockEmployeeService) CloseTx(tx *sqlx.Tx, err error, s string) {

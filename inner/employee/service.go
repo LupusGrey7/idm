@@ -39,7 +39,7 @@ func NewService(repo Repo, validator Validator) *Service {
 func (svc *Service) FindAll() ([]Response, error) {
 	entities, err := svc.repo.FindAllEmployees()
 	if err != nil {
-		return nil, fmt.Errorf("error finding employees: %w", err)
+		return nil, domain.ErrFindAllFailed
 	}
 
 	responses := make([]Response, 0, len(entities))

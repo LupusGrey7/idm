@@ -35,7 +35,7 @@ type Svc interface {
 	UpdateEmployee(id int64, request UpdateRequest) (Response, error)
 	DeleteById(id int64) (Response, error)
 	DeleteByIds(ids []int64) (Response, error)
-	FindEmployeeByNameTx(name string) (bool, err error)
+	FindEmployeeByNameTx(name string) (bool, error)
 	CloseTx(*sqlx.Tx, error, string)
 }
 
@@ -73,7 +73,7 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	}
 
 	// Вызов сервиса
-	newEmployeeID, err := c.employeeService.CreateEmployee(req)
+	newEmployee, err := c.employeeService.CreateEmployee(req)
 	if err != nil {
 		// Обработка ошибок с использованием ваших функций
 		switch {
@@ -90,9 +90,7 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	}
 
 	// Успешный ответ с использованием ваших функций
-	return http.CreatedResponse(ctx, map[string]interface{}{
-		"id": newEmployeeID,
-	})
+	return http.CreatedResponse(ctx, newEmployee)
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
@@ -125,13 +123,12 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.employeeService.FindAll()
 	if err != nil {
 		switch {
-		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
-			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+		case errors.Is(err, domain.ErrFindAllFailed):
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, "Failed to find all employees")
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
-
 	return http.OkResponse(ctx, response)
 }
 
@@ -226,7 +223,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	response, err := c.employeeService.DeleteByIds(ids)
 	if err != nil {
 		switch {
-		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
