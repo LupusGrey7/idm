@@ -3,7 +3,7 @@ package employee
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"idm/inner/pkg/domain"
+	"idm/inner/domain"
 )
 
 type Service struct {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v2" // Версия 2 - позволяет выводить ошибку
 	"github.com/jmoiron/sqlx"
-	"idm/inner/pkg/domain"
-	"idm/inner/transport/http"
+	"idm/inner/domain"
+	"idm/inner/http"
 	"idm/inner/web"
 	"log"
 	"strconv"

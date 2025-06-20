@@ -2,7 +2,7 @@ package role
 
 import (
 	"fmt"
-	"idm/inner/pkg/domain"
+	"idm/inner/domain"
 )
 
 type Service struct {

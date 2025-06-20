@@ -1,4 +1,4 @@
-package mocks
+package role
 
 import "github.com/stretchr/testify/mock"
 

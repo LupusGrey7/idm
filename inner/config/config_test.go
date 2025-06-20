@@ -1,8 +1,7 @@
-package common
+package config
 
 import (
 	"github.com/stretchr/testify/require"
-	"idm/inner/config"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +27,7 @@ func TestGetConfig(t *testing.T) {
 		os.Clearenv()       //Удаляет ВСЕ переменные окружения текущего процесса
 		defer os.Clearenv() //"отложенного выполнения" -> Поставили в очередь очистку окружения
 
-		cfg := config.GetConfig("non_existent.env")
+		cfg := GetConfig("non_existent.env")
 
 		//assert - проверяет условия, но не останавливает тест при ошибке
 		assert.Empty(t, cfg.DbDriverName) // Проверяем, что структура пустая
@@ -44,7 +43,7 @@ func TestGetConfig(t *testing.T) {
 		err := os.WriteFile(envPath, []byte(""), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез) -> 0644 - права доступа (rw-r--r--)
 		require.NoError(t, err, "Failed to create empty .env file")
 
-		cfg := config.GetConfig(envPath) // Вызываем функцию GetConfig, функцию получения конфигурации передавая путь к пустому .env файлу
+		cfg := GetConfig(envPath) // Вызываем функцию GetConfig, функцию получения конфигурации передавая путь к пустому .env файлу
 
 		assert.Empty(t, cfg.DbDriverName) // Проверяем, что DbDriverName пустая строка
 		assert.Empty(t, cfg.Dsn)          // Проверяем, что Dsn пустая строка
@@ -63,7 +62,7 @@ func TestGetConfig(t *testing.T) {
 		t.Setenv("DB_DRIVER_NAME", "postgres")                       // Устанавливаем переменные окружения
 		t.Setenv("DB_DSN", "postgres://user:pass@localhost:5432/db") // Устанавливаем переменные окружения
 
-		cfg := config.GetConfig(envPath) // Читаем конфиг
+		cfg := GetConfig(envPath) // Читаем конфиг
 
 		//assert - проверяет условия, но не останавливает тест при ошибке
 		assert.Equal(t, "postgres", cfg.DbDriverName) //Проверяет, что значение равно ожидаемому
@@ -82,7 +81,7 @@ DB_DSN=postgres://user:pass@localhost:5432/db
 `), 0644) // Создаем пустой файл .env (содержимое - пустой байтовый срез), заполняем данными -> 0644 - права доступа (rw-r--r--)
 		require.NoError(t, err, "Failed to create .env file")
 
-		cfg := config.GetConfig(envPath)
+		cfg := GetConfig(envPath)
 
 		//assert - проверяет условия, но не останавливает тест при ошибке
 		assert.Equal(t, "postgres", cfg.DbDriverName)
@@ -105,7 +104,7 @@ DB_DSN=mysql://user:pass@localhost:3306/db
 		t.Setenv("DB_DRIVER_NAME", "postgres")                       // Устанавливаем другие значения через env
 		t.Setenv("DB_DSN", "postgres://user:pass@localhost:5432/db") // Устанавливаем другие значения через env
 
-		cfg := config.GetConfig(envPath)
+		cfg := GetConfig(envPath)
 
 		// assert - проверяет условия, но не останавливает тест при ошибке
 		// Проверяем, что приоритет у переменных окружения

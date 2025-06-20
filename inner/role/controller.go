@@ -3,8 +3,9 @@ package role
 import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
-	error2 "idm/inner/pkg/domain"
-	"idm/inner/transport/http"
+	"idm/inner/domain"
+
+	"idm/inner/http"
 	"idm/inner/web"
 	"log"
 	"strconv"
@@ -60,7 +61,7 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindAll()
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -79,7 +80,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindById(roleID)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -106,7 +107,7 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindAllByIds(ids)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -126,7 +127,7 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 	newRoleId, err := c.roleService.CreateRole(request)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -151,7 +152,7 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 	updatedRole, err := c.roleService.UpdateRole(roleID, request)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -171,7 +172,7 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	response, err := c.roleService.DeleteById(roleID)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -199,7 +200,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	response, err := c.roleService.DeleteByIds(ids)
 	if err != nil {
 		switch {
-		case errors.As(err, &error2.RequestValidationError{}), errors.As(err, &error2.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())

@@ -1,4 +1,4 @@
-package http
+package employee
 
 import (
 	"encoding/json"
@@ -10,8 +10,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"idm/inner/employee"
-	"idm/tests/unit/mocks"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -21,32 +19,32 @@ type MockService struct {
 	mock.Mock
 }
 
-func (m *MockService) FindAll() ([]employee.Response, error) {
+func (m *MockService) FindAll() ([]Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MockService) FindAllByIds(ids []int64) ([]employee.Response, error) {
+func (m *MockService) FindAllByIds(ids []int64) ([]Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MockService) CreateEmployeeTx(request employee.Entity) (int64, error) {
+func (m *MockService) CreateEmployeeTx(request Entity) (int64, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MockService) UpdateEmployee(id int64, request employee.UpdateRequest) (employee.Response, error) {
+func (m *MockService) UpdateEmployee(id int64, request UpdateRequest) (Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MockService) DeleteById(id int64) (employee.Response, error) {
+func (m *MockService) DeleteById(id int64) (Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MockService) DeleteByIds(ids []int64) (employee.Response, error) {
+func (m *MockService) DeleteByIds(ids []int64) (Response, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -61,14 +59,14 @@ func (m *MockService) CloseTx(tx *sqlx.Tx, err error, s string) {
 	panic("implement me")
 }
 
-func (m *MockService) FindById(id int64) (employee.Response, error) {
+func (m *MockService) FindById(id int64) (Response, error) {
 	args := m.Called(id)
-	return args.Get(0).(employee.Response), args.Error(1)
+	return args.Get(0).(Response), args.Error(1)
 }
 
-func (m *MockService) CreateEmployee(req employee.CreateRequest) (employee.Response, error) {
+func (m *MockService) CreateEmployee(req CreateRequest) (Response, error) {
 	args := m.Called(req)
-	return args.Get(0).(employee.Response), args.Error(1)
+	return args.Get(0).(Response), args.Error(1)
 }
 
 // ... аналогично для других методов
@@ -84,8 +82,8 @@ func TestEmployeeController_FindById(t *testing.T) {
 		GroupEmployees: app.Group("/api/v1/employees"),
 	}
 
-	mockService := new(mocks.MockEmployeeService)
-	ctrl := employee.NewController(server, mockService)
+	mockService := new(MockEmployeeService)
+	ctrl := NewController(server, mockService)
 	server.GroupEmployees.Get("/:id", ctrl.FindById)
 
 	// 6. Тестовый случай
@@ -94,7 +92,7 @@ func TestEmployeeController_FindById(t *testing.T) {
 		testName := "John Sena"
 		now := time.Now().UTC().Truncate(time.Second)
 
-		expectedData := employee.Response{
+		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
 			CreateAt: now,
@@ -126,8 +124,8 @@ func TestEmployeeController_FindById(t *testing.T) {
 
 		// Декодируем в структуру-обёртку
 		var responseWrapper struct {
-			Success bool              `json:"success"`
-			Data    employee.Response `json:"data"`
+			Success bool     `json:"success"`
+			Data    Response `json:"data"`
 		}
 
 		err = json.Unmarshal(body, &responseWrapper)
