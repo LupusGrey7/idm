@@ -61,7 +61,7 @@ func TestRoleRepository(t *testing.T) {
 		roleID := fixtureRole.Role("DBA", &empID)
 
 		var roleEntity = fixtureRole.RoleUpdate(roleID, "DBA", &empID, time.Now(), time.Now())
-		err := repo.UpdateEmployee(&roleEntity)
+		err := repo.UpdateRole(&roleEntity)
 
 		a.Nil(err)
 

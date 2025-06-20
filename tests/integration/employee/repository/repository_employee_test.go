@@ -129,7 +129,7 @@ func TestEmployeeRepository(t *testing.T) {
 	t.Run("find all employees by ids", func(t *testing.T) {
 		employeeOneId := fixtureEmployee.Employee("Test Name")
 		employeeTwoId := fixtureEmployee.Employee("Test2 2Name")
-		var ids []int64 = []int64{employeeOneId, employeeTwoId}
+		var ids = []int64{employeeOneId, employeeTwoId}
 
 		got, err := repo.FindAllEmployeesByIds(ids)
 
@@ -147,7 +147,7 @@ func TestEmployeeRepository(t *testing.T) {
 	t.Run("delete all employees by ids", func(t *testing.T) {
 		employeeOneId := fixtureEmployee.Employee("Test Name")
 		employeeTwoId := fixtureEmployee.Employee("Test2 2Name")
-		var ids []int64 = []int64{employeeOneId, employeeTwoId}
+		var ids = []int64{employeeOneId, employeeTwoId}
 
 		err := repo.DeleteAllEmployeesByIds(ids)
 		a.Nil(err, "Delete should not return error")
