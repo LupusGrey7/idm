@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"idm/tests/fixtures"
 	"idm/tests/testutils"
@@ -30,6 +31,53 @@ func TestEmployeeRepository(t *testing.T) {
 	//var employeeRepository = employee.NewEmployeeRepository(db)
 	repo := fixture.EmployeeRepository()
 	var fixtureEmployee = fixtures.NewFixtureEmployee(repo)
+
+	t.Run("create and find Employee by ID using Transaction", func(t *testing.T) {
+		employeeID, err := fixtureEmployee.EmployeeTx("John Sena")
+		if !a.NoError(err) {
+			return
+		}
+		a.NotZero(employeeID)
+		log.Printf("Created EmployeeID: %d", employeeID)
+
+		// Даем время на коммит транзакции
+		time.Sleep(100 * time.Millisecond)
+		log.Printf("EmployeeID -->> : %d", employeeID)
+
+		got, err := repo.FindById(employeeID)
+
+		a.Nil(err)
+		a.NotEmpty(got)
+		a.NotEmpty(got.Id)
+		a.NotEmpty(got.CreatedAt)
+		a.NotEmpty(got.UpdatedAt)
+		a.Equal(employeeID, got.Id)
+		a.Equal("John Sena", got.Name)
+		a.True(got.CreatedAt.After(time.Now().Add(-5 * time.Second)))
+		// сколько раз вызван сервис?
+		clearDatabase()
+	})
+
+	t.Run("when create Employee using Transaction and Entity already exist ", func(t *testing.T) {
+		var expErr = errors.New("employee with name John Sena already exists")
+
+		var newEmployeeId = fixtureEmployee.Employee("John Sena")
+		a.NotZero(newEmployeeId)
+
+		expt, err := repo.FindById(newEmployeeId)
+		a.Nil(err)
+		a.NotEmpty(expt)
+
+		_, err = fixtureEmployee.EmployeeTx("John Sena")
+		time.Sleep(100 * time.Millisecond)
+
+		a.NotNil(err)
+		a.NotEmpty(err)
+		a.Equal(err, expErr)
+
+		// сколько раз вызван сервис?
+		clearDatabase()
+	})
 
 	t.Run("create and find employee by id", func(t *testing.T) {
 		var newEmployeeId = fixtureEmployee.Employee("John Doe")
@@ -81,7 +129,7 @@ func TestEmployeeRepository(t *testing.T) {
 	t.Run("find all employees by ids", func(t *testing.T) {
 		employeeOneId := fixtureEmployee.Employee("Test Name")
 		employeeTwoId := fixtureEmployee.Employee("Test2 2Name")
-		var ids []int64 = []int64{employeeOneId, employeeTwoId}
+		var ids = []int64{employeeOneId, employeeTwoId}
 
 		got, err := repo.FindAllEmployeesByIds(ids)
 
@@ -99,7 +147,7 @@ func TestEmployeeRepository(t *testing.T) {
 	t.Run("delete all employees by ids", func(t *testing.T) {
 		employeeOneId := fixtureEmployee.Employee("Test Name")
 		employeeTwoId := fixtureEmployee.Employee("Test2 2Name")
-		var ids []int64 = []int64{employeeOneId, employeeTwoId}
+		var ids = []int64{employeeOneId, employeeTwoId}
 
 		err := repo.DeleteAllEmployeesByIds(ids)
 		a.Nil(err, "Delete should not return error")
