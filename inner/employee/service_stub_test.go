@@ -1,9 +1,10 @@
-package service
+package employee
 
 import (
 	"errors"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
-	"idm/inner/employee"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 )
@@ -11,26 +12,45 @@ import (
 // StubEmployeeRepository is a stub implementation of employee.Repository.
 type StubEmployeeRepository struct {
 	// Поля для хранения заранее заданных данных
-	employee employee.Entity
+	employee Entity
 	err      error
 }
 
-func (s *StubEmployeeRepository) FindAllEmployees() ([]employee.Entity, error) {
+func (s *StubEmployeeRepository) CreateEntityTx(tx *sqlx.Tx, entity *Entity) (int64, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindAllEmployeesByIds(ids []int64) ([]employee.Entity, error) {
+func (s *StubEmployeeRepository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) Create(entity *employee.Entity) (employee.Entity, error) {
+func (s *StubEmployeeRepository) BeginTransaction() (tx *sqlx.Tx, err error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) UpdateEmployee(entity *employee.Entity) error {
+func (s *StubEmployeeRepository) FindAllEmployees() ([]Entity, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StubEmployeeRepository) FindAllEmployeesByIds(ids []int64) ([]Entity, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *StubEmployeeRepository) CreateEmployee(entity *Entity) (Entity, error) {
+	return Entity{
+		Id:        1,
+		Name:      entity.Name,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}, nil
+}
+
+func (s *StubEmployeeRepository) UpdateEmployee(entity *Entity) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -45,7 +65,7 @@ func (s *StubEmployeeRepository) DeleteAllEmployeesByIds(ids []int64) error {
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindById(id int64) (employee.Entity, error) {
+func (s *StubEmployeeRepository) FindById(id int64) (Entity, error) {
 	return s.employee, s.err
 }
 
@@ -56,7 +76,8 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 	t.Run("when get Employee By ID then returns employee", func(t *testing.T) {
 		// Создаём тестовые данные
 		now := time.Now()
-		expectedEntity := employee.Entity{
+
+		expectedEntity := Entity{
 			Id:        1,
 			Name:      "John Doe",
 			CreatedAt: now,
@@ -71,10 +92,11 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 		}
 
 		// Создаём сервис с заглушкой
-		service := employee.NewService(repo)
-
+		validator := new(MockValidator)        // TODO mocks validator
+		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
+		validator.On("Validate", mock.Anything).Return(nil)
 		// Вызываем метод сервиса
-		got, err := service.FindById(1)
+		got, err := service.FindById(int64(1))
 
 		// Проверяем результаты
 		a.NoError(err)
@@ -84,19 +106,21 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 	t.Run("when get Employee By ID then returns error", func(t *testing.T) {
 		// Создаём заглушку с ошибкой
 		repo := &StubEmployeeRepository{ // <- & создаёт указатель (как `new E()` в Java)
-			employee: employee.Entity{},
+			employee: Entity{},
 			err:      errors.New("employee not found"),
 		}
 
 		// Создаём сервис с заглушкой
-		service := employee.NewService(repo)
+		validator := new(MockValidator)        // TODO mocks validator
+		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 
+		validator.On("Validate", mock.Anything).Return(errors.New("error finding employee with id 1: employee not found"))
 		// Вызываем метод сервиса
 		got, err := service.FindById(1)
 
 		// Проверяем результаты
 		a.Error(err)
-		a.Equal(employee.Response{}, got)
-		a.Equal("employee not found", err.Error())
+		a.Equal(Response{}, got)
+		a.Equal("error finding employee with id 1: employee not found", err.Error())
 	})
 }

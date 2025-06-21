@@ -3,7 +3,7 @@ package database
 import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"idm/inner/common"
+	"idm/inner/config"
 	"time"
 )
 
@@ -13,7 +13,7 @@ import (
 
 // ConnectDb получить конфиг и подключиться с ним к базе данных
 func ConnectDb() *sqlx.DB {
-	cfg := common.GetConfig(".env")
+	cfg := config.GetConfig(".env")
 	return ConnectDbWithCfg(cfg)
 }
 
@@ -24,7 +24,7 @@ func ConnectDb() *sqlx.DB {
 * Ознакомиться с их описанием можно на примере документации Hikari pool:
 * https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#gear-configuration-knobs-baby
  */
-func ConnectDbWithCfg(cfg common.Config) *sqlx.DB {
+func ConnectDbWithCfg(cfg config.Config) *sqlx.DB {
 	db := sqlx.MustConnect(cfg.DbDriverName, cfg.Dsn)
 
 	// Настраиваем пул соединений через глобальную переменную DB

@@ -2,7 +2,6 @@ package role
 
 import (
 	"github.com/jmoiron/sqlx"
-	_ "idm/inner/employee"
 	"time"
 )
 
@@ -54,7 +53,7 @@ func (r *Repository) FindById(id int64) (entity Entity, err error) {
 }
 
 // UpdateEmployee - UPDATE / Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
-func (r *Repository) UpdateEmployee(entity *Entity) error {
+func (r *Repository) UpdateRole(entity *Entity) error {
 	_, err := r.db.Exec(
 		"UPDATE roles SET name = $1, updated_at = $2 WHERE id = $3",
 		entity.Name, time.Now(), entity.Id)
