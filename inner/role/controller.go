@@ -134,7 +134,7 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 		}
 	}
 
-	return http.OkResponse(ctx, newRoleId)
+	return http.CreatedResponse(ctx, newRoleId)
 }
 
 func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
@@ -152,7 +152,7 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 	updatedRole, err := c.roleService.UpdateRole(roleID, request)
 	if err != nil {
 		switch {
-		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
@@ -172,7 +172,7 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	response, err := c.roleService.DeleteById(roleID)
 	if err != nil {
 		switch {
-		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())

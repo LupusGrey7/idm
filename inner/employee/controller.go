@@ -175,7 +175,7 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 	updatedEmployee, err := c.employeeService.UpdateEmployee(employeeID, request)
 	if err != nil {
 		switch {
-		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
+		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
