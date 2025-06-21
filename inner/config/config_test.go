@@ -29,7 +29,10 @@ func TestGetConfig(t *testing.T) {
 	// Восстановление окружения после тестов
 	defer func() {
 		for key, val := range originalEnv {
-			os.Setenv(key, val)
+			err := os.Setenv(key, val)
+			if err != nil {
+				t.Errorf("failed to restore env var %s: %v", key, err)
+			}
 		}
 	}()
 
@@ -42,7 +45,12 @@ APP_VERSION=1.0.0`
 		envFile := ".test.env"
 		err := os.WriteFile(envFile, []byte(envContent), 0644)
 		require.NoError(t, err)
-		defer os.Remove(envFile)
+		defer func() {
+			err := os.Remove(envFile)
+			if err != nil {
+				t.Errorf("failed to remove test env file: %v", err)
+			}
+		}()
 
 		// Тестируем
 		cfg := GetConfig(envFile)
@@ -56,10 +64,14 @@ APP_VERSION=1.0.0`
 
 	t.Run("Valid config from environment variables", func(t *testing.T) {
 		// Устанавливаем переменные окружения
-		os.Setenv("DB_DRIVER_NAME", "mysql")
-		os.Setenv("DB_DSN", "host=127.0.0.1 user=root")
-		os.Setenv("APP_NAME", "TestApp2")
-		os.Setenv("APP_VERSION", "2.0.0")
+		err := os.Setenv("DB_DRIVER_NAME", "mysql")
+		require.NoError(t, err)
+		err = os.Setenv("DB_DSN", "host=127.0.0.1 user=root")
+		require.NoError(t, err)
+		err = os.Setenv("APP_NAME", "TestApp2")
+		require.NoError(t, err)
+		err = os.Setenv("APP_VERSION", "2.0.0")
+		require.NoError(t, err)
 
 		// Тестируем с несуществующим .env файлом
 		cfg := GetConfig("non_existent.env")
@@ -74,7 +86,10 @@ APP_VERSION=1.0.0`
 	t.Run("Missing required fields", func(t *testing.T) {
 		// Очищаем все переменные окружения
 		for _, key := range []string{"DB_DRIVER_NAME", "DB_DSN", "APP_NAME", "APP_VERSION"} {
-			os.Unsetenv(key)
+			err := os.Unsetenv(key)
+			if err != nil {
+				t.Errorf("failed to unset env var %s: %v", key, err)
+			}
 		}
 
 		// Проверяем панику при отсутствии конфигурации
@@ -89,12 +104,20 @@ APP_VERSION=1.0.0`
 		envFile := ".test_partial.env"
 		err := os.WriteFile(envFile, []byte(envContent), 0644)
 		require.NoError(t, err)
-		defer os.Remove(envFile)
+		defer func() {
+			err := os.Remove(envFile)
+			if err != nil {
+				t.Errorf("failed to remove test env file: %v", err)
+			}
+		}()
 
 		// Устанавливаем полные переменные окружения
-		os.Setenv("DB_DSN", "host=127.0.0.1")
-		os.Setenv("APP_NAME", "TestApp3")
-		os.Setenv("APP_VERSION", "3.0.0")
+		err = os.Setenv("DB_DSN", "host=127.0.0.1")
+		require.NoError(t, err)
+		err = os.Setenv("APP_NAME", "TestApp3")
+		require.NoError(t, err)
+		err = os.Setenv("APP_VERSION", "3.0.0")
+		require.NoError(t, err)
 
 		// Тестируем
 		cfg := GetConfig(envFile)
