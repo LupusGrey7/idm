@@ -3,7 +3,6 @@ module idm
 go 1.24.3
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/gofiber/fiber/v2 v2.52.8
 	github.com/jmoiron/sqlx v1.4.0
