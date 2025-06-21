@@ -466,7 +466,7 @@ func TestRole_Controller(t *testing.T) {
 		roleID := int64(1)
 		expectedError := errors.New("database error")
 
-		// 3. Настройка мока (с явным указанием .Once())
+		// 3. Настройка мока (с явным указанием .Once())- (вызовется ровно 1 раз)
 		mockService.On("DeleteById", roleID).Return(Response{}, expectedError).Once()
 
 		// 4. Создание запроса
