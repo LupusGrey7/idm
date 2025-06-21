@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"idm/inner/config"
 	"idm/inner/domain"
@@ -62,7 +60,6 @@ func TestController_GetInfo_Error(t *testing.T) {
 			}
 		}(resp.Body)
 
-		log.Error(t, "Error", "Failed to send health response", "error", mock.Anything)
 		// 5. Проверка сырого ответа
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
