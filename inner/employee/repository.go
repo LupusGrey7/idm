@@ -14,6 +14,11 @@ func NewRepository(database *sqlx.DB) *Repository {
 	return &Repository{db: database}
 }
 
+// BeginTransaction - great transaction for Repository
+func (r *Repository) BeginTransaction() (tx *sqlx.Tx, err error) {
+	return r.db.Beginx()
+}
+
 // FindAllEmployees - найти все элементы коллекции
 func (r *Repository) FindAllEmployees() (employees []Entity, err error) {
 	err = r.db.Select(&employees, "SELECT * FROM employees")
@@ -41,16 +46,37 @@ func (r *Repository) FindById(id int64) (employee Entity, err error) {
 	return employee, err
 }
 
+// FindByNameTx - Проверить наличие в базе данных сотрудника с заданным именем
+func (r *Repository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
+	err = tx.Get(
+		&isExists,
+		"select exists(select 1 from employees where name = $1)",
+		name,
+	)
+	return isExists, err
+}
+
+// CreateEntityTx - created Employee using DB Transaction
+func (r *Repository) CreateEntityTx(tx *sqlx.Tx, entity *Entity) (employeeId int64, err error) {
+	err = tx.Get(
+		&employeeId,
+		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING id",
+		entity.Name, time.Now(), time.Now(),
+	)
+	return employeeId, err
+}
+
 // CreateEmployee - добавить новый элемент в коллекцию
-func (r *Repository) CreateEmployee(entity Entity) (employee Entity, err error) {
-	err = r.db.Get(&employee,
+func (r *Repository) CreateEmployee(entity *Entity) (employee Entity, err error) {
+	err = r.db.Get(
+		&employee,
 		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
 		entity.Name, time.Now(), time.Now())
 
 	return employee, err
 }
 
-// UPDATE - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
+// UpdateEmployee - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
 func (r *Repository) UpdateEmployee(entity *Entity) error {
 	_, err := r.db.Exec(
 		"UPDATE employees SET name = $1, updated_at = $2 WHERE id = $3",
