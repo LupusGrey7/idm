@@ -26,3 +26,47 @@ func (e *Entity) ToResponse() Response {
 		UpdateAt: e.UpdatedAt,
 	}
 }
+
+type CreateRequest struct {
+	Name string `json:"name" validate:"required,min=2,max=155"`
+}
+
+func (req *CreateRequest) ToEntity() *Entity {
+	return &Entity{Name: req.Name}
+}
+
+type UpdateRequest struct {
+	Id        int64     `json:"id" validate:"required,min=1"`
+	Name      string    `json:"name" validate:"required,min=2,max=155"`
+	CreatedAt time.Time `json:"createdAt" validate:"required"`
+	UpdatedAt time.Time `json:"updatedAt" validate:"required"`
+}
+
+func (req *UpdateRequest) ToEntity() *Entity {
+	return &Entity{
+		Id:        req.Id,
+		Name:      req.Name,
+		CreatedAt: req.CreatedAt,
+		UpdatedAt: req.UpdatedAt,
+	}
+}
+
+type UpdateByIDRequest struct {
+	ID int64 `validate:"required,min=1"`
+}
+
+type FindAllByIdsRequest struct {
+	IDs []int64 `validate:"required,min=1,dive,min=1"`
+}
+
+type FindByIDRequest struct {
+	ID int64 `validate:"required,min=1"`
+}
+
+type DeleteByIdsRequest struct {
+	IDs []int64 `validate:"required,min=1,dive,min=1"`
+}
+
+type DeleteByIdRequest struct {
+	ID int64 `validate:"required,min=1"`
+}

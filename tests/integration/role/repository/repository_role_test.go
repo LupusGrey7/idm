@@ -61,7 +61,7 @@ func TestRoleRepository(t *testing.T) {
 		roleID := fixtureRole.Role("DBA", &empID)
 
 		var roleEntity = fixtureRole.RoleUpdate(roleID, "DBA", &empID, time.Now(), time.Now())
-		err := repo.UpdateEmployee(&roleEntity)
+		err := repo.UpdateRole(&roleEntity)
 
 		a.Nil(err)
 
@@ -92,7 +92,7 @@ func TestRoleRepository(t *testing.T) {
 		var empID2 = fixtureEmployee.Employee("Alice Marcus")
 		roleOneId := fixtureRole.Role("DBU", &empID1)
 		roleTwoId := fixtureRole.Role("DBA", &empID2)
-		var ids []int64 = []int64{roleOneId, roleTwoId}
+		var ids = []int64{roleOneId, roleTwoId}
 
 		got, err := repo.FindAllRolesByIds(ids)
 
@@ -110,7 +110,7 @@ func TestRoleRepository(t *testing.T) {
 	t.Run("delete all roles by ids", func(t *testing.T) {
 		roleOneId := fixtureRole.Role("DBU", nil)
 		roleTwoId := fixtureRole.Role("DBA", nil)
-		var ids []int64 = []int64{roleOneId, roleTwoId}
+		var ids = []int64{roleOneId, roleTwoId}
 
 		err := repo.DeleteAllRolesByIds(ids)
 
