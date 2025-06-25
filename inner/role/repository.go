@@ -35,7 +35,7 @@ func (r *Repository) FindAllRolesByIds(ids []int64) (roleEntities []Entity, err 
 }
 
 // CreateRole - добавить новый элемент в коллекцию
-func (r *Repository) CreateRole(entity Entity) (roleEntity Entity, err error) {
+func (r *Repository) CreateRole(entity *Entity) (roleEntity Entity, err error) {
 	err = r.db.Get(&roleEntity, `
         INSERT INTO roles (name, employee_id, created_at, updated_at) 
         VALUES ($1, $2, $3, $4)

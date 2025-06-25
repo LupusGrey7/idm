@@ -11,11 +11,11 @@ type Service struct {
 }
 
 type Repo interface {
+	FindAllRoles() ([]Entity, error)
+	FindAllRolesByIds(ids []int64) ([]Entity, error)
 	FindById(id int64) (Entity, error)
 	CreateRole(entity *Entity) (Entity, error)
 	UpdateRole(entity *Entity) error
-	FindAllRoles() ([]Entity, error)
-	FindAllRolesByIds(ids []int64) ([]Entity, error)
 	DeleteRoleById(id int64) error
 	DeleteAllRolesByIds(ids []int64) error
 }

@@ -1,9 +1,13 @@
 package database
 
 import (
+	"database/sql"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
 	"idm/inner/config"
+	"log"
 	"time"
 )
 
@@ -14,6 +18,8 @@ import (
 // ConnectDb получить конфиг и подключиться с ним к базе данных
 func ConnectDb() *sqlx.DB {
 	cfg := config.GetConfig(".env")
+	log.Printf("cfn env file %v", cfg.Dsn)
+
 	return ConnectDbWithCfg(cfg)
 }
 
@@ -34,4 +40,33 @@ func ConnectDbWithCfg(cfg config.Config) *sqlx.DB {
 	db.SetConnMaxIdleTime(10 * time.Minute)
 
 	return db
+}
+
+func RunMigrations(db *sql.DB) error {
+	goose.SetTableName("goose_db_version") // явно задаём имя таблицы
+
+	// 1. Проверяем, существует ли таблица миграций
+	var exists bool
+	err := db.QueryRow(
+		`SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'goose_db_version'
+        )`).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check migrations table: %w", err)
+	}
+
+	// 2. Если таблицы нет - создаём
+	if !exists {
+		if err := goose.Up(db, "./migrations"); err != nil {
+			return fmt.Errorf("failed to apply initial migrations: %w", err)
+		}
+	}
+
+	// 3. Проверяем наличие новых миграций
+	if err := goose.Status(db, "./migrations"); err != nil {
+		return fmt.Errorf("migration status check failed: %w", err)
+	}
+
+	return nil
 }

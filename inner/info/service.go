@@ -1,11 +1,28 @@
 package info
 
-import "github.com/jmoiron/sqlx"
+import (
+	"fmt"
+	"github.com/jmoiron/sqlx"
+	"log"
+)
 
-type HealthService struct {
+type Service struct {
 	db *sqlx.DB
 }
 
-func (s *HealthService) CheckDB() error {
-	return s.db.Ping()
+type Repo interface {
+}
+
+// NewService - function constructor
+func NewService(db *sqlx.DB) *Service {
+	return &Service{db: db}
+}
+
+func (s *Service) CheckDB() error {
+	if s.db == nil {
+		return fmt.Errorf("database connection is not initialized ")
+	}
+	err := s.db.Ping()
+	log.Printf("DB PING ERROR status IS: %v\n", err)
+	return err
 }

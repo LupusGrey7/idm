@@ -46,13 +46,13 @@ type Svc interface {
 // RegisterRoutes - функция для регистрации маршрутов
 func (c *Controller) RegisterRoutes() {
 	// полный маршрут получится "/api/v1/roles"
-	c.server.GroupEmployees.Get("/", c.FindAll)
-	c.server.GroupEmployees.Get("/ids", c.FindAllByIds)
-	c.server.GroupEmployees.Get("/:id", c.FindById)
-	c.server.GroupEmployees.Post("/", c.CreateRole)
-	c.server.GroupEmployees.Put("/:id", c.UpdateRole)
-	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
-	c.server.GroupEmployees.Delete("/:id", c.DeleteById)
+	c.server.GroupRoles.Get("/", c.FindAll)
+	c.server.GroupRoles.Get("/ids", c.FindAllByIds)
+	c.server.GroupRoles.Get("/:id", c.FindById)
+	c.server.GroupRoles.Post("/", c.CreateRole)
+	c.server.GroupRoles.Put("/:id", c.UpdateRole)
+	c.server.GroupRoles.Delete("/ids", c.DeleteByIds)
+	c.server.GroupRoles.Delete("/:id", c.DeleteById)
 }
 
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
@@ -67,6 +67,7 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
+	log.Printf("Get All Roles have size: %d", len(response))
 	return http.OkResponse(ctx, response)
 }
 
