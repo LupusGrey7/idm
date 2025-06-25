@@ -43,7 +43,12 @@ func TestDatabaseConnection(t *testing.T) {
 
 		// Этот вызов должен вызвать панику
 		db := database.ConnectDbWithCfg(cfg)
-		defer db.Close()
+		//после
+		defer func() {
+			if err := db.Close(); err != nil {
+				t.Logf("failed to close database connection: %v", err)
+			}
+		}()
 	})
 
 	// Тест для корректного подключения без пароля + Корректный конфиг БД
@@ -55,8 +60,12 @@ func TestDatabaseConnection(t *testing.T) {
 		}
 
 		db := database.ConnectDbWithCfg(cfg)
-
-		defer db.Close() //после завершения теста
+		//после завершения теста
+		defer func() {
+			if err := db.Close(); err != nil {
+				t.Logf("failed to close database connection: %v", err)
+			}
+		}()
 
 		// Проверяем подключение
 		err := db.Ping()
