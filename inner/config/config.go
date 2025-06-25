@@ -39,6 +39,8 @@ func GetConfig(envFile string) Config {
 		AppName:      os.Getenv("APP_NAME"),
 		AppVersion:   os.Getenv("APP_VERSION"), //for example, see = .env file APP_VERSION
 	}
+	log.Println("GetConfig DB dsn: ", cfg.Dsn)
+
 	err = validator.New().Struct(cfg)
 	if err != nil {
 		var validateErrs validator.ValidationErrors
