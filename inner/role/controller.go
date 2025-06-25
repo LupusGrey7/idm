@@ -3,11 +3,12 @@ package role
 import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
+	"idm/inner/common"
 	"idm/inner/domain"
 
 	"idm/inner/http"
 	"idm/inner/web"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -23,13 +24,19 @@ const (
 type Controller struct {
 	server      *web.Server
 	roleService Svc
+	logger      *common.Logger
 }
 
 // NewController - функция-конструктор
-func NewController(server *web.Server, roleService Svc) *Controller {
+func NewController(
+	server *web.Server,
+	roleService Svc,
+	logger *common.Logger,
+) *Controller {
 	return &Controller{
 		server:      server,
 		roleService: roleService,
+		logger:      logger,
 	}
 }
 
@@ -60,6 +67,12 @@ func (c *Controller) RegisterRoutes() {
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindAll()
 	if err != nil {
+		c.logger.Error(
+			"Failed to get roles",
+			zap.Error(err),
+			zap.Int("size", len(response)),
+		)
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -67,7 +80,10 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
 	}
-	log.Printf("Get All Roles have size: %d", len(response))
+	c.logger.Debug(
+		"Get All Roles have size",
+		zap.Int("size", len(response)),
+	)
 	return http.OkResponse(ctx, response)
 }
 
@@ -121,12 +137,15 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 	var request CreateRequest
 	if err := ctx.BodyParser(&request); err != nil {
-		log.Printf("CreateRole: body parse error: %v", err)
+		c.logger.Error("body parse error when create role", zap.Error(err))
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
 	newRoleId, err := c.roleService.CreateRole(request)
 	if err != nil {
+		c.logger.Error("Failed to get roles", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())

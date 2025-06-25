@@ -2,7 +2,8 @@ package info
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
+	"go.uber.org/zap"
+	"idm/inner/common"
 	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
@@ -12,6 +13,7 @@ type Controller struct {
 	server *web.Server
 	cfg    config.Config
 	svc    Svc
+	logger *common.Logger
 }
 
 type Svc interface {
@@ -22,18 +24,14 @@ func NewController(
 	server *web.Server,
 	cfg config.Config,
 	svc Svc,
+	logger *common.Logger,
 ) *Controller {
 	return &Controller{
 		server: server,
 		cfg:    cfg,
 		svc:    svc,
+		logger: logger,
 	}
-}
-
-type InfoResponse struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-	Status  string `json:"status"`
 }
 
 func (c *Controller) RegisterRoutes() {
@@ -48,14 +46,14 @@ func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
 			JSON(domain.NewDBUnavailableError(err.Error()))
 	}
 
-	response := InfoResponse{
+	response := Response{
 		Name:    c.cfg.AppName,
 		Version: c.cfg.AppVersion,
 		Status:  "OK",
 	}
 
 	if err := ctx.Status(fiber.StatusOK).JSON(response); err != nil {
-		log.Error("Failed to encode response", "error", err)
+		c.logger.Error("Failed to encode response %s", zap.Error(err))
 		return ctx.Status(fiber.StatusInternalServerError).
 			JSON(domain.NewInternalServerError("response serialization failed"))
 	}
@@ -66,7 +64,9 @@ func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
 // GetHealth проверка работоспособности приложения
 func (c *Controller) GetHealth(ctx *fiber.Ctx) error {
 	if err := c.svc.CheckDB(); err != nil {
+		c.logger.Error("Failed to Check DB Health %s", zap.Error(err))
 		return ctx.Status(503).SendString("DB unavailable")
 	}
+
 	return ctx.Status(200).SendString("OK")
 }

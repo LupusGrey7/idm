@@ -3,19 +3,27 @@ package info
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"log"
+	"go.uber.org/zap"
+	"idm/inner/common"
 )
 
 type Service struct {
-	db *sqlx.DB
+	db     *sqlx.DB
+	logger *common.Logger
 }
 
 type Repo interface {
 }
 
 // NewService - function constructor
-func NewService(db *sqlx.DB) *Service {
-	return &Service{db: db}
+func NewService(
+	db *sqlx.DB,
+	logger *common.Logger,
+) *Service {
+	return &Service{
+		db:     db,
+		logger: logger,
+	}
 }
 
 func (s *Service) CheckDB() error {
@@ -23,6 +31,7 @@ func (s *Service) CheckDB() error {
 		return fmt.Errorf("database connection is not initialized ")
 	}
 	err := s.db.Ping()
-	log.Printf("DB PING ERROR status IS: %v\n", err)
+	s.logger.Debug("DB PING status IS: %s", zap.Error(err))
+
 	return err
 }

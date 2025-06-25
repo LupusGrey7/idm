@@ -4,17 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/joho/godotenv"
-	"log"
+	"go.uber.org/zap"
 	"os"
 )
 
 // Config - общая конфигурация всего приложения для БД
 type Config struct {
-	DbDriverName string `validate:"required"`
-	Dsn          string `validate:"required"`
-	AppName      string `validate:"required"` // Название приложения
-	AppVersion   string `validate:"required"` // Версия приложения
+	DbDriverName   string `validate:"required"`
+	Dsn            string `validate:"required"`
+	AppName        string `validate:"required"` // Название приложения
+	AppVersion     string `validate:"required"` // Версия приложения
+	LogLevel       string
+	LogDevelopMode bool
 }
 
 //GetConfig
@@ -23,23 +26,25 @@ type Config struct {
 * from _ = godotenv.Load(envFile) // где символ _ игнорирует возвращаемое значение
  */
 func GetConfig(envFile string) Config {
-	var err = godotenv.Load(envFile) // где символ _ игнорирует возвращаемое значение
-	// Тихая загрузка .env без логирования ошибок
+	var err = godotenv.Load(envFile) // Тихая загрузка .env без логирования ошибок
 	if err != nil {
 		// если нет файла, то залогируем это и попробуем получить конфиг из переменных окружения
-		fmt.Printf("Error loading .env file: %v\n", err)
-		// Не логируем ошибку "файл не найден"
+		log.Error("Error loading .env file: %v\n", zap.Error(err))
+		//  логируем ошибку "файл не найден"
 		if !os.IsNotExist(err) {
-			log.Printf("Error loading .env file: %v", err)
+			log.Error("Error loading .env file: %v", err)
 		}
 	}
-	var cfg = Config{ // значения переменных окружения могут быть получены из .env файла или переменных окружения
-		DbDriverName: os.Getenv("DB_DRIVER_NAME"),
-		Dsn:          os.Getenv("DB_DSN"),
-		AppName:      os.Getenv("APP_NAME"),
-		AppVersion:   os.Getenv("APP_VERSION"), //for example, see = .env file APP_VERSION
+	// значения переменных окружения могут быть получены из .env файла или переменных окружения
+	var cfg = Config{
+		DbDriverName:   os.Getenv("DB_DRIVER_NAME"),
+		Dsn:            os.Getenv("DB_DSN"),
+		AppName:        os.Getenv("APP_NAME"),
+		AppVersion:     os.Getenv("APP_VERSION"), //for example, see = .env file APP_VERSION
+		LogLevel:       os.Getenv("LOG_LEVEL"),
+		LogDevelopMode: os.Getenv("LOG_DEVELOP_MODE") == "true",
 	}
-	log.Println("GetConfig DB dsn: ", cfg.Dsn)
+	log.Infof("GetConfig DB dsn: %v", cfg.Dsn)
 
 	err = validator.New().Struct(cfg)
 	if err != nil {

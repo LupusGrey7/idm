@@ -6,18 +6,40 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"idm/inner/common"
 	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
 	"io"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 // MockDatabase - мок для интерфейса Database
 
 func TestController_GetInfo_Error(t *testing.T) {
+	// Подготовка тестового .env файла
+	envContent := `DB_DRIVER_NAME=postgres
+DB_DSN=host=127.0.0.1 user=test dbname=idm_tests
+APP_NAME=TestIdm
+APP_VERSION=1.0.0
+LOG_LEVEL=DEBUG
+LOG_DEVELOP_MODE=true`
+	envFile := ".test.env"
+	err := os.WriteFile(envFile, []byte(envContent), 0644)
+	require.NoError(t, err)
+	defer func() {
+		err := os.Remove(envFile)
+		if err != nil {
+			t.Errorf("failed to remove test env file: %v", err)
+		}
+	}()
+	cfg := config.GetConfig(envFile)
+	var logger = common.NewLogger(cfg) // Создаем логгер
+
 	var a = assert.New(t) // Создаём экземпляр объекта с ассерт-функциями
+
 	// 1. Подготовка
 	app := fiber.New()
 	mockCfg := config.Config{
@@ -32,12 +54,12 @@ func TestController_GetInfo_Error(t *testing.T) {
 		GroupInternal: app.Group("/internal"), // Группа непубличного API
 	}
 
-	ctrl := NewController(server, mockCfg, mockService)
+	ctrl := NewController(server, mockCfg, mockService, logger)
 
 	server.GroupInternal.Get("/info", ctrl.GetInfo)
 	server.GroupInternal.Get("/health", ctrl.GetHealth)
 
-	response := InfoResponse{
+	response := Response{
 		Name:    "TestApp",
 		Version: "1.0.0",
 		Status:  "OK",
@@ -67,7 +89,7 @@ func TestController_GetInfo_Error(t *testing.T) {
 		// 6.  Проверка статуса
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 		// Декодируем в структуру-обёртку
-		var responseWrapper InfoResponse
+		var responseWrapper Response
 		err = json.Unmarshal(body, &responseWrapper)
 		require.NoError(t, err)
 

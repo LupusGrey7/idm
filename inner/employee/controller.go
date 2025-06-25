@@ -4,10 +4,11 @@ import (
 	"errors"
 	"github.com/gofiber/fiber/v2" // Версия 2 - позволяет выводить ошибку
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
+	"idm/inner/common"
 	"idm/inner/domain"
 	"idm/inner/http"
 	"idm/inner/web"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -23,6 +24,7 @@ const (
 type Controller struct {
 	server          *web.Server
 	employeeService Svc
+	logger          *common.Logger
 }
 
 // Svc - интерфейс сервиса employee.Service
@@ -40,10 +42,15 @@ type Svc interface {
 }
 
 // NewController - функция-конструктор
-func NewController(server *web.Server, employeeService Svc) *Controller {
+func NewController(
+	server *web.Server,
+	employeeService Svc,
+	logger *common.Logger,
+) *Controller {
 	return &Controller{
 		server:          server,
 		employeeService: employeeService,
+		logger:          logger,
 	}
 }
 
@@ -63,20 +70,23 @@ func (c *Controller) RegisterRoutes() {
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
 func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
-	var req CreateRequest
+	var request CreateRequest
 
 	// Парсинг тела запроса
-	if err := ctx.BodyParser(&req); err != nil {
-		log.Printf("CreateEmployee: body parse error: %v", err)
+	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error("CreateEmployee: body parse error", zap.Error(err))
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestFormat)
 
 	}
+	// логируем тело запроса
+	c.logger.Debug("create employee: received request", zap.Any("request", request))
 
 	// Вызов сервиса
-	newEmployee, err := c.employeeService.CreateEmployee(req)
+	newEmployee, err := c.employeeService.CreateEmployee(request)
 	if err != nil {
-		// Обработка ошибок с использованием ваших функций
-		switch {
+
+		c.logger.Error("When create employee was error", zap.Error(err)) // логируем ошибку
+		switch {                                                         // Обработка ошибок с использованием ваших функций
 		case errors.Is(err, domain.ErrValidation):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, validationFailed)
 
@@ -84,7 +94,7 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 			return http.ErrResponse(ctx, fiber.StatusConflict, "Employee already exists")
 
 		default:
-			log.Printf("CreateEmployee service error: %v", err)
+			c.logger.Error("CreateEmployee service error: %s", zap.Error(err))
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, internalServerError)
 		}
 	}
@@ -106,7 +116,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			log.Printf("FindById error: %v", err)
+			c.logger.Error("When Employee FindById was error: %s", zap.Error(err))
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, internalServerError)
 		}
 	}

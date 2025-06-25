@@ -4,20 +4,48 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/require"
+	"idm/inner/common"
+	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 )
 
 func TestEmployeeController_FindAll(t *testing.T) {
+	// Подготовка тестового .env файла
+	envContent := `DB_DRIVER_NAME=postgres
+DB_DSN=host=127.0.0.1 user=test dbname=idm_tests
+APP_NAME=TestIdm
+APP_VERSION=1.0.0
+LOG_LEVEL=DEBUG
+LOG_DEVELOP_MODE=true`
+	envFile := ".test.env"
+	err := os.WriteFile(envFile, []byte(envContent), 0644)
+	require.NoError(t, err)
+	defer func() {
+		err := os.Remove(envFile)
+		if err != nil {
+			t.Errorf("failed to remove test env file: %v", err)
+		}
+	}()
+
+	// Тестируем
+	cfg := config.GetConfig(envFile)
+	var logger = common.NewLogger(cfg) // Создаем логгер
 	app := fiber.New()
 	mockService := new(MockEmployeeService)
-	ctrl := NewController(&web.Server{
-		App:            app,
-		GroupEmployees: app.Group("/api/v1/employees"),
-	}, mockService)
+	ctrl := NewController(
+		&web.Server{
+			App:            app,
+			GroupEmployees: app.Group("/api/v1/employees"),
+		},
+		mockService,
+		logger,
+	)
 
 	app.Get("/api/v1/employees/", ctrl.FindAll)
 
