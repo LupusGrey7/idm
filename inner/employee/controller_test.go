@@ -10,6 +10,7 @@ import (
 	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
+	"idm/inner/web/middleware"
 	"io"
 	"os"
 
@@ -51,6 +52,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 1. Инициализация
 	app := fiber.New()
+	middleware.RegisterMiddleware(app, logger) //middleware
 
 	server := &web.Server{
 		App:            app,
@@ -81,6 +83,7 @@ LOG_DEVELOP_MODE=true`
 	// 6. Тестовые случаи
 	t.Run("should return employee by Id", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -89,7 +92,7 @@ LOG_DEVELOP_MODE=true`
 		}
 
 		// 3. Настройка мока
-		mockService.On("FindById", testID).Return(expectedData, nil)
+		mockService.On("FindById", testID).Return(expectedData, nil).Once()
 
 		// 4. Выполнение запроса
 		req := httptest.NewRequest("GET", "/api/v1/employees/1", nil)
@@ -110,7 +113,11 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
 
-		// 6. Проверки
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку
@@ -135,9 +142,10 @@ LOG_DEVELOP_MODE=true`
 		mockService.AssertExpectations(t)
 
 	})
-	// create
+	// create entity
 	t.Run("should return created employee", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -162,6 +170,8 @@ LOG_DEVELOP_MODE=true`
 		// Выполняем проверки полученных данных
 		a.Nil(err)
 		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		a.Equal(http.StatusCreated, resp.StatusCode)
 
 		bytesData, err := io.ReadAll(resp.Body)
@@ -208,6 +218,8 @@ LOG_DEVELOP_MODE=true`
 		defer closeBody(t, resp.Body)
 
 		// 4. Проверяем ответ
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		// Выполняем проверки полученных данных - Проверка тела ответа
@@ -261,6 +273,7 @@ LOG_DEVELOP_MODE=true`
 	//update by id
 	t.Run("should return employee when update by Id", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -310,6 +323,8 @@ LOG_DEVELOP_MODE=true`
 		t.Logf("Raw response: %s", string(body))
 
 		// 6. Проверки
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку
@@ -493,11 +508,15 @@ LOG_DEVELOP_MODE=true`
 	// Тест на отсутствие параметра ids для FindAllByIds
 	t.Run("should return error when ids parameter is missing for FindAllByIds", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		req := httptest.NewRequest("GET", "/api/v1/employees/ids", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
 		defer closeBody(t, resp.Body)
 
+		//
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
@@ -625,6 +644,8 @@ LOG_DEVELOP_MODE=true`
 		defer closeBody(t, resp.Body)
 
 		// 5. Проверки
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		body, _ := io.ReadAll(resp.Body)
@@ -666,8 +687,9 @@ LOG_DEVELOP_MODE=true`
 		assert.Contains(t, response.Error, "Invalid ID format")
 	})
 	//delete all by ids
-	t.Run("should return success when delete ALl by Ids", func(t *testing.T) {
+	t.Run("should return success when delete All Employees by IDs", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		// Подготовка тестовых данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3" // ID как строка с разделителем-запятой
@@ -697,6 +719,8 @@ LOG_DEVELOP_MODE=true`
 		defer closeBody(t, resp.Body)
 
 		// 4. Проверка статуса
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// 5. Проверка тела ответа
@@ -805,6 +829,6 @@ LOG_DEVELOP_MODE=true`
 }
 func closeBody(t *testing.T, body io.ReadCloser) {
 	if err := body.Close(); err != nil {
-		t.Errorf("failed to close body: %v", err)
+		t.Errorf("Error closing response body: %v", err)
 	}
 }
