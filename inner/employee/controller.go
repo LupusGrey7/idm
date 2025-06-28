@@ -70,21 +70,35 @@ func (c *Controller) RegisterRoutes() {
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
 func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 	var request CreateRequest
 
 	// Парсинг тела запроса
 	if err := ctx.BodyParser(&request); err != nil {
-		c.logger.Error("When the body parse an CreateEmployee ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the body parse an CreateEmployee ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestFormat)
 
 	}
 	// логируем тело запроса
-	c.logger.Debug("When the body parse an CreateEmployee was: received request", zap.Any("request", request))
+	c.logger.Debug(
+		"When the body parse an CreateEmployee was: received request",
+		zap.Any("request", request),
+		zap.String("request_id", requestId),
+	)
 
 	// Вызов сервиса
 	newEmployee, err := c.employeeService.CreateEmployee(request)
 	if err != nil {
-		c.logger.Error("When the create employee ended with an error:", zap.Error(err)) // логируем ошибку
+		c.logger.Error( // логируем ошибку
+			"When the create employee ended with an error:",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch { // Обработка ошибок с использованием ваших функций
 		case errors.As(err, &domain.RequestValidationError{}):
@@ -94,7 +108,6 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 			return http.ErrResponse(ctx, fiber.StatusConflict, "Employee already exists")
 
 		default:
-			c.logger.Error("CreateEmployee service error: %s", zap.Error(err))
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, internalServerError)
 		}
 	}
@@ -104,15 +117,29 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
-	idStr := ctx.Params("id") // Анмаршалим path var запроса
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+	pathUrl := ctx.Path()                          // Получаем путь запроса
+	idStr := ctx.Params("id")                      // Анмаршалим path var запроса
+
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error(
+			"When the body parse an CreateEmployee ended with an error:",
+			zap.Error(err),
+			zap.String("path", pathUrl),
+			zap.String("request_id", requestId),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	response, err := c.employeeService.FindById(employeeID)
 	if err != nil {
-		c.logger.Error("When the get Employee ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the get Employee ended with an error:",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
@@ -131,9 +158,15 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	response, err := c.employeeService.FindAll()
 	if err != nil {
-		c.logger.Error("When the find for ALl Employees ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the find for ALl Employees ended with an error:",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.Is(err, domain.ErrFindAllFailed):
@@ -146,8 +179,15 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
+		c.logger.Error(
+			"When the parse an Find All Employees By IDs request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 
@@ -155,6 +195,12 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			c.logger.Error(
+				"When the parse an Find All Employees By IDs request param ended with an error:",
+				zap.Error(err),
+				zap.String("request_id", requestId),
+			)
+
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat+idStr)
 		}
 		ids = append(ids, id)
@@ -162,7 +208,11 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.employeeService.FindAllByIds(ids)
 	if err != nil {
-		c.logger.Error("When the search for all employees by identifiers ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the search for all employees by identifiers ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
@@ -176,22 +226,38 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Update(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idStr := ctx.Params("id")
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.logger.Error("When the parse an Update Employee request ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the parse an Update Employee request ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	var request UpdateRequest
 	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error(
+			"When the parse an Update Employee request ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
 	updatedEmployee, err := c.employeeService.UpdateEmployee(employeeID, request)
 	if err != nil {
-		c.logger.Error("When the update for employee ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the update for employee ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
@@ -205,17 +271,27 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idStr := ctx.Params("id")
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.logger.Error("When the parse an Delete Employee By Id request param ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the parse an Delete Employee By Id request param ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	response, err := c.employeeService.DeleteById(employeeID)
 	if err != nil {
-		c.logger.Error("When the delete an Employee By ID request ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the delete an Employee By ID request ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
@@ -229,9 +305,15 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
-		c.logger.Error("When the parse an Delete Employees By IDs request param ended with an error: %s", zap.Error(nil))
+		c.logger.Error(
+			"When the parse an Delete Employees By IDs request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
@@ -240,6 +322,12 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			c.logger.Error(
+				"When the parse an Delete Employees By IDs request param ended with an error:",
+				zap.Error(err),
+				zap.String("request_id", requestId),
+			)
+
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, "Invalid ID format"+idStr)
 		}
 		ids = append(ids, id)
@@ -247,7 +335,11 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.employeeService.DeleteByIds(ids)
 	if err != nil {
-		c.logger.Error("When the delete an Delete Employees By Ids ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the delete an Delete Employees By Ids ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
@@ -261,15 +353,26 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	var request CreateRequest
 	if err := ctx.BodyParser(&request); err != nil {
-		c.logger.Error("When the parse an Create Employee request ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the parse an Create Employee request ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
 	response, err := c.employeeService.CreateEmployeeTx(request)
 	if err != nil {
-		c.logger.Error("When the create Employee ended with an error: %s", zap.Error(err))
+		c.logger.Error(
+			"When the create Employee ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):

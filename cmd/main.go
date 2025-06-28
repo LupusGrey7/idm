@@ -115,7 +115,7 @@ func build(
 	cfg config.Config,
 	logger *common.Logger,
 ) *web.Server {
-	var server = web.NewServer()       // создаём веб-сервер
+	var server = web.NewServer(logger) // создаём веб-сервер
 	var vld = validator.NewValidator() // создаём валидатор
 	//routing
 	var employeeRepo = employee.NewRepository(dbase)                                 // создаём репозиторий
