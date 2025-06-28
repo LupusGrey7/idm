@@ -8,10 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"idm/inner/common"
+	"idm/inner/config"
 	"idm/inner/web"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +22,27 @@ import (
 
 func TestRole_Controller(t *testing.T) {
 	var a = assert.New(t) // Создаём экземпляр объекта с ассерт-функциями
+
+	// Подготовка тестового .env файла
+	envContent := `DB_DRIVER_NAME=postgres
+DB_DSN=host=127.0.0.1 user=test dbname=idm_tests
+APP_NAME=TestIdm
+APP_VERSION=1.0.0
+LOG_LEVEL=DEBUG
+LOG_DEVELOP_MODE=true`
+	envFile := ".test.env"
+	err := os.WriteFile(envFile, []byte(envContent), 0644)
+	require.NoError(t, err)
+	defer func() {
+		err := os.Remove(envFile)
+		if err != nil {
+			t.Errorf("failed to remove test env file: %v", err)
+		}
+	}()
+
+	// Тестируем
+	cfg := config.GetConfig(envFile)
+	var logger = common.NewLogger(cfg) // Создаем логгер
 
 	// 1. Инициализация
 	app := fiber.New()
@@ -30,7 +54,7 @@ func TestRole_Controller(t *testing.T) {
 	}
 
 	mockService := new(MockRoleService)
-	ctrl := NewController(server, mockService)
+	ctrl := NewController(server, mockService, logger)
 
 	server.GroupEmployees.Get("/", ctrl.FindAll)
 	server.GroupEmployees.Get("/ids", ctrl.FindAllByIds) // Сначала специфичный маршрут

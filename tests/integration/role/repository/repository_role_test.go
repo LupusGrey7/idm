@@ -36,10 +36,10 @@ func TestRoleRepository(t *testing.T) {
 	employeeRepo := fixture.EmployeeRepository()
 	var fixtureEmployee = fixtures.NewFixtureEmployee(employeeRepo)
 
-	t.Run("create and find an role by id", func(t *testing.T) {
-		// Создаём сотрудника и роль
-		empID := fixtureEmployee.Employee("John Doe")
-		roleID := fixtureRole.Role("DBA", &empID)
+	t.Run("when create and then find role by id", func(t *testing.T) {
+
+		empID := fixtureEmployee.Employee("John Doe") // Создаём сотрудника
+		roleID := fixtureRole.Role("DBA", &empID)     // Создаём роль с сотрудником
 
 		got, err := repo.FindById(roleID)
 
