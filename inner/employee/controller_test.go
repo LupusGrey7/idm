@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"idm/inner/common"
 	"idm/inner/config"
+	"idm/inner/domain"
 	"idm/inner/web"
 	"io"
 	"os"
@@ -24,7 +26,7 @@ import (
 
 // ... аналогично для других методов
 
-func TestEmployeeController_FindById(t *testing.T) {
+func TestEmployee_Controller(t *testing.T) {
 	// Подготовка тестового .env файла
 	envContent := `DB_DRIVER_NAME=postgres
 DB_DSN=host=127.0.0.1 user=test dbname=idm_tests
@@ -71,10 +73,14 @@ LOG_DEVELOP_MODE=true`
 	testID := int64(1)
 	testName := "John Sena"
 	now := time.Now().UTC().Truncate(time.Second)
+	//Сброс моков перед каждым тестом (рекомендуется)
+	t.Cleanup(func() {
+		mockService.AssertExpectations(t)
+	})
 
-	// 6. Тестовый случай
+	// 6. Тестовые случаи
 	t.Run("should return employee by Id", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -131,7 +137,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// create
 	t.Run("should return created employee", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -174,12 +180,87 @@ LOG_DEVELOP_MODE=true`
 		a.True(responseBody.Success)
 		//a.Empty(responseBody.Message)
 		a.Equal(testID, responseBody.Data.Id)
-		//a.Equal(testName, responseBody.Data.Name)
-		//a.Equal(now, responseBody.Data.CreateAt)
-		//a.Equal(now, responseBody.Data.UpdateAt)
+		a.Equal(testName, responseBody.Data.Name)
+		a.Equal(now, responseBody.Data.CreateAt)
+		a.Equal(now, responseBody.Data.UpdateAt)
+	})
+	//create error by name
+	t.Run("when create employee then should return error", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		testName := "J"                 // Используем то же имя, что и в теле запроса
+
+		createRequest := CreateRequest{
+			Name: testName,
+		}
+		//Важно!- Ошибка валидации должна быть типа domain.RequestValidationError
+		expectError := domain.RequestValidationError{Message: "validate name error"}
+
+		// Готовим тестовое окружение
+		var body = strings.NewReader("{\"name\": \"J\"}")
+		var req = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees/", body) // 4. Выполнение запроса
+		req.Header.Set("Content-Type", "application/json")
+
+		// Настраиваем поведение мока в тесте
+		mockService.On("CreateEmployee", createRequest).Return(Response{}, expectError).Once()
+		// Отправляем тестовый запрос на веб сервер
+		resp, err := app.Test(req)
+		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
+		defer closeBody(t, resp.Body)
+
+		// 4. Проверяем ответ
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+		// Выполняем проверки полученных данных - Проверка тела ответа
+		var errorResponse struct {
+			Error string `json:"error"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&errorResponse)
+		require.NoError(t, err)
+		require.Contains(t, errorResponse.Error, "validate name error")
+
+		// 6. Проверка вызовов мока
+		mockService.AssertExpectations(t)
+	})
+	//create error by server error
+	t.Run("when create employee then should return error", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		testName := "J"                 // Используем то же имя, что и в теле запроса
+
+		createRequest := CreateRequest{
+			Name: testName,
+		}
+		//Важно!- Ошибка валидации должна быть типа domain.RequestValidationError
+		expectError := fmt.Errorf("error creating Role with name %s: %w", createRequest.Name, errors.New("server error"))
+
+		// Готовим тестовое окружение
+		var body = strings.NewReader("{\"name\": \"J\"}")
+		var req = httptest.NewRequest(fiber.MethodPost, "/api/v1/employees/", body) // 4. Выполнение запроса
+		req.Header.Set("Content-Type", "application/json")
+
+		// Настраиваем поведение мока в тесте
+		mockService.On("CreateEmployee", createRequest).Return(Response{}, expectError).Once()
+		// Отправляем тестовый запрос на веб сервер
+		resp, err := app.Test(req)
+		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
+		defer closeBody(t, resp.Body)
+
+		// 4. Проверяем ответ
+		require.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+		// Выполняем проверки полученных данных - Проверка тела ответа
+		var errorResponse struct {
+			Error string `json:"error"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&errorResponse)
+		require.NoError(t, err)
+		require.Contains(t, errorResponse.Error, "Internal server error")
+
+		// 6. Проверка вызовов мока
+		mockService.AssertExpectations(t)
 	})
 	//update by id
 	t.Run("should return employee when update by Id", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		expectedData := Response{
 			Id:       testID,
 			Name:     testName,
@@ -207,7 +288,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
-		mockService.On("UpdateEmployee", testID, mock.AnythingOfType("UpdateRequest")).Return(expectedData, nil)
+		mockService.On("UpdateEmployee", testID, mock.AnythingOfType("UpdateRequest")).Return(expectedData, nil).Once()
 		// 5. Выполнение запроса
 		resp, err := app.Test(req)
 		if err != nil {
@@ -253,8 +334,125 @@ LOG_DEVELOP_MODE=true`
 		mockService.AssertExpectations(t)
 
 	})
+	//when update by ID error
+	t.Run("should return error when update by Id", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		requestEmployee := UpdateRequest{
+			Id:        int64(0),
+			Name:      testName,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		//Важно!- Ошибка валидации должна быть типа domain.RequestValidationError
+		expectError := domain.RequestValidationError{Message: "validate name error"}
+		// 1. Сериализуем структуру в JSON
+		requestBody, err := json.Marshal(requestEmployee)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// 2. Создаем запрос с телом
+		req := httptest.NewRequest("PUT", "/api/v1/employees/1", bytes.NewBuffer(requestBody))
+
+		// 3. Устанавливаем заголовки
+		req.Header.Set("Content-Type", "application/json")
+
+		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
+		mockService.On("UpdateEmployee", testID, mock.AnythingOfType("UpdateRequest")).Return(Response{}, expectError).Once()
+		// 5. Выполнение запроса
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		require.NoError(t, err)
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				if err != nil {
+					t.Errorf("Error closing response body: %v", err)
+				}
+			}
+		}(resp.Body)
+
+		// 6. Проверки
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+		var errorResponse struct {
+			Error string `json:"error"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&errorResponse)
+		require.NoError(t, err)
+		require.Contains(t, errorResponse.Error, "validate name error")
+
+		// 6. Проверка вызовов мока
+		mockService.AssertExpectations(t)
+	})
+	//when ID param update error
+	t.Run("should return error when update by Id", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		idParam := "abc"
+
+		requestEmployee := UpdateRequest{
+			Id:        int64(0),
+			Name:      testName,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		//Важно!- Ошибка валидации должна быть типа domain.RequestValidationError
+		//expectError := domain.RequestValidationError{Message: "Invalid ID format"}
+		// 1. Сериализуем структуру в JSON
+		requestBody, err := json.Marshal(requestEmployee)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// 2. Создаем запрос с телом
+		req := httptest.NewRequest("PUT", "/api/v1/employees/"+idParam, bytes.NewBuffer(requestBody))
+
+		// 3. Устанавливаем заголовки
+		req.Header.Set("Content-Type", "application/json")
+
+		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры) - в данном случае мок не вызывается
+		//mockService.On(
+		//	"UpdateEmployee",
+		//	testID,
+		//	mock.AnythingOfType("UpdateRequest"),
+		//).Return(expectedData, expectError).Once()
+
+		// 5. Выполнение запроса
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		require.NoError(t, err)
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				if err != nil {
+					t.Errorf("Error closing response body: %v", err)
+				}
+			}
+		}(resp.Body)
+
+		// 6. Проверки
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+		var errorResponse struct {
+			Error string `json:"error"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&errorResponse)
+		require.NoError(t, err)
+		require.Contains(t, errorResponse.Error, "Invalid ID format")
+		assert.Equal(t, "Invalid ID format", errorResponse.Error, "expected error message to match")
+
+		// 6. Проверка вызовов мока
+		mockService.AssertNotCalled(t, "UpdateEmployee") // Проверяем, что UpdateEmployee НЕ был вызван
+	})
 	// Тест на успешное получение по IDs
 	t.Run("should return employees when found by IDs", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"
@@ -292,9 +490,9 @@ LOG_DEVELOP_MODE=true`
 		assert.True(t, response.Success)
 		assert.Equal(t, expectedData, response.Data)
 	})
-
 	// Тест на отсутствие параметра ids для FindAllByIds
 	t.Run("should return error when ids parameter is missing for FindAllByIds", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		req := httptest.NewRequest("GET", "/api/v1/employees/ids", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -308,6 +506,7 @@ LOG_DEVELOP_MODE=true`
 
 	// Тест на неверный формат ID для FindAllByIds
 	t.Run("should return error when invalid ID format for FindAllByIds", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		req := httptest.NewRequest("GET", "/api/v1/employees/ids?ids=1,abc,3", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -318,9 +517,9 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		assert.Contains(t, string(body), "Invalid ID format")
 	})
-
 	// Тест на пустой результат для FindAllByIds
 	t.Run("should return empty array when no employees found", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"
@@ -350,7 +549,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	//delete by id
 	t.Run("should return success when delete by Id", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		response := Response{}
 
 		// 1. Сериализуем структуру в JSON
@@ -408,8 +607,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// delete by id error
 	t.Run("should return error when delete employee by ID", func(t *testing.T) {
-		// Сброс предыдущих ожиданий мока
-		mockService.ExpectedCalls = nil
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := "abc" // ID роли
 		expectedError := errors.New("Invalid ID format")
@@ -441,6 +639,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на неверный формат ID
 	t.Run("should return error when invalid employee ID format", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных с невалидным ID
 		idParam := "abc"
 
@@ -468,6 +667,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	//delete all by ids
 	t.Run("should return success when delete ALl by Ids", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// Подготовка тестовых данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3" // ID как строка с разделителем-запятой
@@ -518,6 +718,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на отсутствие параметра ids
 	t.Run("should return error when ids parameter is missing", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Создаем запрос БЕЗ параметра ids
 		req := httptest.NewRequest("DELETE", "/api/v1/employees/ids", nil)
 		req.Header.Set("Content-Type", "application/json")
@@ -542,6 +743,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на неверный формат ID
 	t.Run("should return error when invalid ID format", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных с невалидным ID
 		idParam := "1,abc,3"
 
@@ -569,6 +771,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на ошибку сервиса при удалении
 	t.Run("should return error when service fails", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"

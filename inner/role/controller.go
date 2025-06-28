@@ -68,9 +68,9 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.roleService.FindAll()
 	if err != nil {
 		c.logger.Error(
-			"Failed to get roles",
-			zap.Error(err),
-			zap.Int("size", len(response)),
+			"FindAll ended with error",           // Сообщение без форматирования - zap сам обработает
+			zap.Error(err),                       // Ошибка
+			zap.Int("roles_size", len(response)), // Более явное название поля
 		)
 
 		switch {
@@ -82,7 +82,7 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	}
 	c.logger.Debug(
 		"Get All Roles have size",
-		zap.Int("size", len(response)),
+		zap.Int("roles_size", len(response)),
 	)
 	return http.OkResponse(ctx, response)
 }
@@ -91,11 +91,23 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error(
+			"ID parse error when get role",
+			zap.Error(err),
+			zap.String("id", idStr),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	response, err := c.roleService.FindById(roleID)
 	if err != nil {
+		c.logger.Error(
+			"Failed to get roles By ID",
+			zap.Error(err),
+			zap.Int64("id", roleID),
+		)
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -109,6 +121,10 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
+		c.logger.Error("When the parse request parameter an FindAll Role By Ids ended with an error",
+			zap.String("ids", idsParam),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 
@@ -144,7 +160,10 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 
 	newRoleId, err := c.roleService.CreateRole(request)
 	if err != nil {
-		c.logger.Error("Failed to get roles", zap.Error(err))
+		c.logger.Error(
+			"When the create role ended with an error",
+			zap.Error(err),
+		)
 
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
@@ -161,16 +180,31 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("ID parse error when update role",
+			zap.Error(err),
+			zap.String("id", idStr),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	var request UpdateRequest
 	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error(
+			"body parse error when update role",
+			zap.Error(err),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
 	updatedRole, err := c.roleService.UpdateRole(roleID, request)
 	if err != nil {
+		c.logger.Error("When the update role ended with an error",
+			zap.Error(err),
+			zap.Int64("id", roleID),
+		)
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -186,11 +220,20 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("ID parse error when delete role",
+			zap.Error(err),
+			zap.String("id", idStr),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	response, err := c.roleService.DeleteById(roleID)
 	if err != nil {
+		c.logger.Error("When the delete role ended with an error",
+			zap.Error(err),
+			zap.Int64("id", roleID),
+		)
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -205,6 +248,10 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
+		c.logger.Error("When the parse request parameter an Delete Role By Ids ended with an error",
+			zap.String("ids", idsParam),
+		)
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 

@@ -15,7 +15,7 @@ import (
 
 const (
 	invalidRequestFormat = "Invalid request format"
-	validationFailed     = "Validation failed"
+	validationFailed     = "validate name error"
 	internalServerError  = "Internal server error"
 	invalidIDFormat      = "Invalid ID format"
 	invalidRequestBody   = "Invalid request body"
@@ -74,20 +74,20 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 
 	// Парсинг тела запроса
 	if err := ctx.BodyParser(&request); err != nil {
-		c.logger.Error("CreateEmployee: body parse error", zap.Error(err))
+		c.logger.Error("When the body parse an CreateEmployee ended with an error: %s", zap.Error(err))
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestFormat)
 
 	}
 	// логируем тело запроса
-	c.logger.Debug("create employee: received request", zap.Any("request", request))
+	c.logger.Debug("When the body parse an CreateEmployee was: received request", zap.Any("request", request))
 
 	// Вызов сервиса
 	newEmployee, err := c.employeeService.CreateEmployee(request)
 	if err != nil {
+		c.logger.Error("When the create employee ended with an error:", zap.Error(err)) // логируем ошибку
 
-		c.logger.Error("When create employee was error", zap.Error(err)) // логируем ошибку
-		switch {                                                         // Обработка ошибок с использованием ваших функций
-		case errors.Is(err, domain.ErrValidation):
+		switch { // Обработка ошибок с использованием ваших функций
+		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, validationFailed)
 
 		case errors.Is(err, domain.ErrConflict):
@@ -112,11 +112,12 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 
 	response, err := c.employeeService.FindById(employeeID)
 	if err != nil {
+		c.logger.Error("When the get Employee ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
 		default:
-			c.logger.Error("When Employee FindById was error: %s", zap.Error(err))
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, internalServerError)
 		}
 	}
@@ -132,6 +133,8 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	response, err := c.employeeService.FindAll()
 	if err != nil {
+		c.logger.Error("When the find for ALl Employees ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.Is(err, domain.ErrFindAllFailed):
 			return http.ErrResponse(ctx, fiber.StatusInternalServerError, "Failed to find all employees")
@@ -159,6 +162,8 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.employeeService.FindAllByIds(ids)
 	if err != nil {
+		c.logger.Error("When the search for all employees by identifiers ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -174,6 +179,8 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("When the parse an Update Employee request ended with an error: %s", zap.Error(err))
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
@@ -184,6 +191,8 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 
 	updatedEmployee, err := c.employeeService.UpdateEmployee(employeeID, request)
 	if err != nil {
+		c.logger.Error("When the update for employee ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -199,11 +208,15 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	idStr := ctx.Params("id")
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		c.logger.Error("When the parse an Delete Employee By Id request param ended with an error: %s", zap.Error(err))
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
 	response, err := c.employeeService.DeleteById(employeeID)
 	if err != nil {
+		c.logger.Error("When the delete an Employee By ID request ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -218,6 +231,8 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
+		c.logger.Error("When the parse an Delete Employees By IDs request param ended with an error: %s", zap.Error(nil))
+
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
 	}
 
@@ -232,6 +247,8 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.employeeService.DeleteByIds(ids)
 	if err != nil {
+		c.logger.Error("When the delete an Delete Employees By Ids ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -246,11 +263,14 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
 	var request CreateRequest
 	if err := ctx.BodyParser(&request); err != nil {
+		c.logger.Error("When the parse an Create Employee request ended with an error: %s", zap.Error(err))
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
 	response, err := c.employeeService.CreateEmployeeTx(request)
 	if err != nil {
+		c.logger.Error("When the create Employee ended with an error: %s", zap.Error(err))
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"idm/inner/common"
 	"idm/inner/config"
+	"idm/inner/domain"
 	"idm/inner/web"
 	"io"
 	"net/http"
@@ -67,10 +68,14 @@ LOG_DEVELOP_MODE=true`
 	testID := int64(1)
 	testName := "ADMIN"
 	now := time.Now().UTC().Truncate(time.Second)
+	//Сброс моков перед каждым тестом (рекомендуется)
+	t.Cleanup(func() {
+		mockService.AssertExpectations(t)
+	})
 
-	// 6. Тестовый случай
+	//  Тестовые случаи
 	t.Run("should return role by ID", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		expectedData := Response{
 			Id:         testID,
 			Name:       testName,
@@ -129,7 +134,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// create
 	t.Run("should return created role", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		expectedData := Response{
 			Id:         testID,
 			Name:       testName,
@@ -148,7 +153,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// Настраиваем поведение мока в тесте
-		mockService.On("CreateRole", createRequest).Return(expectedData, nil)
+		mockService.On("CreateRole", createRequest).Return(expectedData, nil).Once()
 		// Отправляем тестовый запрос на веб сервер
 		resp, err := app.Test(req)
 
@@ -177,8 +182,47 @@ LOG_DEVELOP_MODE=true`
 		a.Equal(now, responseBody.Data.CreateAt)
 		a.Equal(now, responseBody.Data.UpdateAt)
 	})
+	// create error
+	t.Run("should return error when create role", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		testName := "A"                 // Используем то же имя, что и в теле запроса
+		createRequest := CreateRequest{
+			Name: testName,
+		}
+
+		//Важно!- Ошибка валидации должна быть типа domain.RequestValidationError
+		expectError := domain.RequestValidationError{Message: "validate name error"}
+
+		// 1. Настраиваем мок с ОЖИДАЕМЫМИ параметрами (должны совпадать с реальным запросом)
+		mockService.On("CreateRole", createRequest).Return(Response{}, expectError).Once()
+
+		// 2. Подготавливаем запрос с теми же данными
+		var body = strings.NewReader(`{"name": "A"}`) // Совпадает с testName
+		var req = httptest.NewRequest(fiber.MethodPost, "/api/v1/roles/", body)
+		req.Header.Set("Content-Type", "application/json")
+
+		// 3. Выполняем запрос
+		resp, err := app.Test(req)
+		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
+		defer closeBody(t, resp.Body)
+
+		// 4. Проверяем ответ
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+
+		// Проверка тела ответа
+		var errorResponse struct {
+			Error string `json:"error"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&errorResponse)
+		require.NoError(t, err)
+		require.Contains(t, errorResponse.Error, "validate name error")
+
+		// 6. Проверка вызовов мока
+		mockService.AssertExpectations(t)
+	})
 	//update by id
 	t.Run("should return role when update by ID", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		ID := int64(1)
 		expectedData := Response{
 			Id:         testID,
@@ -258,14 +302,8 @@ LOG_DEVELOP_MODE=true`
 	})
 	// update by id error
 	t.Run("should return error when update by ID role", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		ID := int64(1)
-		expectedData := Response{
-			Id:         testID,
-			Name:       testName,
-			EmployeeID: &ID,
-			CreateAt:   now,
-			UpdateAt:   now,
-		}
 
 		requestEmployee := UpdateRequest{
 			Id:         int64(0),
@@ -287,8 +325,8 @@ LOG_DEVELOP_MODE=true`
 		// 3. Устанавливаем заголовки
 		req.Header.Set("Content-Type", "application/json")
 
-		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
-		mockService.On("UpdateRole", testID, mock.AnythingOfType("UpdateRequest")).Return(expectedData, nil)
+		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры) - в данном тесте мы не доходим до мока. а падаем еще в контроллере
+		//mockService.On("UpdateRole", testID, mock.AnythingOfType("UpdateRequest")).Return(expectedData, nil).Once()
 		// 5. Выполнение запроса
 		resp, err := app.Test(req)
 		if err != nil {
@@ -329,9 +367,11 @@ LOG_DEVELOP_MODE=true`
 		assert.False(t, responseWrapper.Success)
 		assert.Contains(t, responseWrapper.Error, "Invalid ID format")
 
+		mockService.AssertNotCalled(t, "UpdateRole") // Если метод НЕ должен вызываться
 	})
 	// Тест на успешное получение по IDs
 	t.Run("should return roles when found by IDs", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"
@@ -372,6 +412,7 @@ LOG_DEVELOP_MODE=true`
 
 	// Тест на отсутствие параметра ids для FindAllByIds
 	t.Run("should return error when ids parameter is missing for FindAllByIds", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		req := httptest.NewRequest("GET", "/api/v1/roles/ids", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -384,6 +425,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на неверный формат ID для FindAllByIds
 	t.Run("should return error when invalid ID format for FindAllByIds", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		req := httptest.NewRequest("GET", "/api/v1/roles/ids?ids=1,abc,3", nil)
 		resp, err := app.Test(req)
 		require.NoError(t, err)
@@ -396,6 +438,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на пустой результат для FindAllByIds
 	t.Run("should return empty array when no roles found", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"
@@ -425,7 +468,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	//delete by id
 	t.Run("should return success when delete role by ID", func(t *testing.T) {
-
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		response := Response{}
 
 		// 1. Сериализуем структуру в JSON
@@ -483,6 +526,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// delete by id error
 	t.Run("should return error when delete role by ID", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Сброс предыдущих ожиданий мока
 		mockService.ExpectedCalls = nil
 
@@ -530,6 +574,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на неверный формат ID
 	t.Run("should return error when invalid role ID format", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных с невалидным ID
 		idParam := "abc"
 
@@ -557,6 +602,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	//delete all by ids
 	t.Run("should return success when delete ALl roles by Ids", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// Подготовка тестовых данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3" // ID как строка с разделителем-запятой
@@ -606,6 +652,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на отсутствие параметра ids
 	t.Run("should return error when ids parameter is missing", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Создаем запрос БЕЗ параметра ids
 		req := httptest.NewRequest("DELETE", "/api/v1/roles/ids", nil)
 		req.Header.Set("Content-Type", "application/json")
@@ -630,6 +677,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на неверный формат ID
 	t.Run("should return error when invalid role IDs format", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных с невалидным ID
 		idParam := "1,abc,3"
 
@@ -657,6 +705,7 @@ LOG_DEVELOP_MODE=true`
 	})
 	// Тест на ошибку сервиса при удалении
 	t.Run("should return error when service fails", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
 		// 1. Подготовка данных
 		requestIDs := []int64{1, 2, 3}
 		idParam := "1,2,3"
