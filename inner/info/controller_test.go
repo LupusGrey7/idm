@@ -35,10 +35,11 @@ LOG_DEVELOP_MODE=true`
 			t.Errorf("failed to remove test env file: %v", err)
 		}
 	}()
+
 	cfg := config.GetConfig(envFile)
 	var logger = common.NewLogger(cfg) // Создаем логгер
 
-	var a = assert.New(t) // Создаём экземпляр объекта с ассерт-функциями
+	var a = assert.New(t) // Создаём экземпляр объекта с assert-функциями
 
 	// 1. Подготовка
 	app := fiber.New()
@@ -66,8 +67,12 @@ LOG_DEVELOP_MODE=true`
 	}
 
 	t.Run("should return app info successfully", func(t *testing.T) {
+		// 1. Сброс предыдущих ожиданий мока
+		mockService.ExpectedCalls = nil
+
 		mockService.Test(t) // Важно для корректного отслеживания вызовов - (вызовется ровно 1 раз)
 		mockService.On("CheckDB").Return(nil).Once()
+
 		// 4. Выполнение запроса
 		req := httptest.NewRequest("GET", "/internal/info", nil)
 		resp, err := app.Test(req)
@@ -109,10 +114,11 @@ LOG_DEVELOP_MODE=true`
 
 		// Подготовка мока: CheckDB() возвращает ошибку -(вызовется ровно 1 раз)
 		mockService.On("CheckDB").Return(errors.New("db connection failed")).Once()
+
 		req := httptest.NewRequest("GET", "/internal/info", nil)
 		resp, err := app.Test(req)
-
 		require.NoError(t, err)
+
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
 			if err != nil {
@@ -124,6 +130,7 @@ LOG_DEVELOP_MODE=true`
 
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
+
 		// Проверка статуса
 		require.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
 

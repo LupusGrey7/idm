@@ -1,6 +1,7 @@
 package info
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 	"idm/inner/common"
@@ -17,7 +18,7 @@ type Controller struct {
 }
 
 type Svc interface {
-	CheckDB() error
+	CheckDB(ctx context.Context) error
 }
 
 func NewController(
@@ -41,7 +42,9 @@ func (c *Controller) RegisterRoutes() {
 
 // GetInfo получение информации о приложении
 func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
-	if err := c.svc.CheckDB(); err != nil {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
+	if err := c.svc.CheckDB(appContext); err != nil {
 		return ctx.Status(fiber.StatusServiceUnavailable).
 			JSON(domain.NewDBUnavailableError(err.Error()))
 	}
@@ -53,7 +56,11 @@ func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
 	}
 
 	if err := ctx.Status(fiber.StatusOK).JSON(response); err != nil {
-		c.logger.Error("Failed to encode response %s", zap.Error(err))
+		c.logger.Error(
+			"Failed to encode response: ",
+			zap.Error(err),
+		)
+
 		return ctx.Status(fiber.StatusInternalServerError).
 			JSON(domain.NewInternalServerError("response serialization failed"))
 	}
@@ -63,8 +70,14 @@ func (c *Controller) GetInfo(ctx *fiber.Ctx) error {
 
 // GetHealth проверка работоспособности приложения
 func (c *Controller) GetHealth(ctx *fiber.Ctx) error {
-	if err := c.svc.CheckDB(); err != nil {
-		c.logger.Error("Failed to Check DB Health %s", zap.Error(err))
+	appContext := ctx.UserContext()
+
+	if err := c.svc.CheckDB(appContext); err != nil {
+		c.logger.Error(
+			"Failed to Check DB Health: ",
+			zap.Error(err),
+		)
+
 		return ctx.Status(503).SendString("DB unavailable")
 	}
 
