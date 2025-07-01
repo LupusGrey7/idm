@@ -1,6 +1,7 @@
 package role
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
@@ -38,6 +39,7 @@ LOG_DEVELOP_MODE=true`
 	// Тестируем
 	cfg := config.GetConfig(envFile)
 	var logger = common.NewLogger(cfg) // Создаем логгер
+	appContext := context.Background() // Создаем контекст
 
 	app := fiber.New()
 	middleware.RegisterMiddleware(app, logger) // middleware func
@@ -66,7 +68,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 1. Успешный запрос с данными
 	t.Run("SuccessWithData", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{testRole}, nil).Once()
+		mockService.On("FindAll", appContext).Return([]Response{testRole}, nil).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/roles/", nil)
 		resp, err := app.Test(req)
@@ -92,10 +94,11 @@ LOG_DEVELOP_MODE=true`
 		if !result.Success || result.Error != "" || len(result.Data) != 1 || result.Data[0] != testRole {
 			t.Errorf("Expected success with data, got %+v", result)
 		}
+		mockService.AssertExpectations(t)
 	})
 	// 2. Успешный запрос без данных
 	t.Run("SuccessEmpty", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, nil).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, nil).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/roles/", nil)
 		resp, err := app.Test(req)
@@ -121,10 +124,11 @@ LOG_DEVELOP_MODE=true`
 		if !result.Success || result.Error != "" || len(result.Data) != 0 {
 			t.Errorf("Expected success with empty data, got %+v", result)
 		}
+		mockService.AssertExpectations(t)
 	})
 	// 3. Ошибка поиска - status 500
 	t.Run("FindAllFailed", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, domain.ErrFindAllFailed).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, domain.ErrFindAllFailed).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/roles/", nil)
 		resp, err := app.Test(req)
@@ -151,10 +155,11 @@ LOG_DEVELOP_MODE=true`
 		if result.Success || result.Error != expectedError {
 			t.Errorf("Expected error '%s', got '%s'", expectedError, result.Error)
 		}
+		mockService.AssertExpectations(t)
 	})
 	// 4. Внутренняя ошибка
 	t.Run("InternalError", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, errors.New("db error")).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, errors.New("db error")).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/roles/", nil)
 		resp, err := app.Test(req)
@@ -175,5 +180,6 @@ LOG_DEVELOP_MODE=true`
 		if result.Success || result.Error != expectedError {
 			t.Errorf("Expected error '%s', got '%s'", expectedError, result.Error)
 		}
+		mockService.AssertExpectations(t)
 	})
 }
