@@ -18,7 +18,8 @@ func NewRepository(databese *sqlx.DB) *Repository {
 // FindAllRoles - найти все элементы коллекции
 func (r *Repository) FindAllRoles(ctx context.Context) (roleEntities []Entity, err error) {
 	//	err = r.db.Select(&roleEntities, "SELECT * FROM roles")
-	err = r.db.SelectContext(ctx, &roleEntities, "SELECT * FROM roles")
+	query := `SELECT * FROM roles`
+	err = r.db.SelectContext(ctx, &roleEntities, query)
 
 	return roleEntities, err
 }

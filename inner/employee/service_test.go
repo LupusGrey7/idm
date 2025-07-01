@@ -72,7 +72,7 @@ func (m *MockRepo) DeleteAllEmployeesByIds(ctx context.Context, ids []int64) err
 // https://pkg.go.dev/github.com/stretchr/testify/mock@v1.10.0#Mock.AssertCalled
 func TestEmployeeService(t *testing.T) {
 
-	appContext := context.Background() //— если нужно проверить таймауты
+	appContext := context.Background() //— если не нужно проверить таймауты
 	var a = assert.New(t)              // создаём экземпляр объекта с ассерт-функциями
 
 	t.Run("should return All found employees by IDs", func(t *testing.T) {

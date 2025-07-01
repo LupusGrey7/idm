@@ -3,6 +3,7 @@ package employee
 import (
 	"context"
 	"github.com/jmoiron/sqlx"
+	"log"
 	"time"
 )
 
@@ -23,8 +24,8 @@ func (r *Repository) BeginTransaction() (tx *sqlx.Tx, err error) {
 // FindAllEmployees - найти все элементы коллекции
 func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, err error) {
 	//	err = r.db.Select(&employees, "SELECT * FROM employees")
-
-	err = r.db.GetContext(ctx, &employees, "SELECT * FROM employees")
+	query := `SELECT * FROM employees`
+	err = r.db.SelectContext(ctx, &employees, query)
 
 	return employees, err
 }
@@ -96,18 +97,17 @@ func (r *Repository) CreateEntityTx(
 func (r *Repository) CreateEmployee(
 	ctx context.Context,
 	entity *Entity,
-) (employee Entity, err error) {
-	//err = r.db.Get(
-	//	&employee,
-	//	"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
-	//	entity.Name, time.Now(), time.Now())
+) (result Entity, err error) {
 
-	err = r.db.GetContext(
-		ctx,
-		&employee,
-		"INSERT INTO employees(name, created_at, updated_at) VALUES($1, $2, $3) RETURNING *",
-		entity.Name, time.Now(), time.Now())
-	return employee, err
+	//query, args, err := sqlx.In("INSERT INTO employees(name, created_at, updated_at) VALUES($1, NOW(), NOW()) RETURNING *", entity.Name)
+	query := `
+		INSERT INTO employees(name, created_at, updated_at) VALUES($1, NOW(), NOW()) RETURNING *
+	`
+	args := []interface{}{entity.Name}
+
+	err = r.db.GetContext(ctx, &result, query, args...)
+	log.Printf("Result Employee ->> %v", result)
+	return result, err
 }
 
 // UpdateEmployee - Для Update лучше принимать указатель, так как мы модифицируем сущность: -> *
