@@ -2,6 +2,7 @@ package employee
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,7 +36,7 @@ APP_NAME=TestIdm
 APP_VERSION=1.0.0
 LOG_LEVEL=DEBUG
 LOG_DEVELOP_MODE=true`
-	envFile := ".test.env"
+	envFile := ".test.env" // заглушка для тестов - .env file
 	err := os.WriteFile(envFile, []byte(envContent), 0644)
 	require.NoError(t, err)
 	defer func() {
@@ -47,8 +48,8 @@ LOG_DEVELOP_MODE=true`
 	cfg := config.GetConfig(envFile)
 	var logger = common.NewLogger(cfg) // Создаем логгер
 
-	var a = assert.New(t) // Создаём экземпляр объекта с ассерт-функциями
-	// заглушка для тестов - .env file
+	var a = assert.New(t)              // Создаём экземпляр объекта с ассерт-функциями
+	appContext := context.Background() // создаем контекст приложения
 
 	// 1. Инициализация
 	app := fiber.New()
@@ -92,7 +93,7 @@ LOG_DEVELOP_MODE=true`
 		}
 
 		// 3. Настройка мока
-		mockService.On("FindById", testID).Return(expectedData, nil).Once()
+		mockService.On("FindById", appContext, testID).Return(expectedData, nil).Once()
 
 		// 4. Выполнение запроса
 		req := httptest.NewRequest("GET", "/api/v1/employees/1", nil)
@@ -163,7 +164,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// Настраиваем поведение мока в тесте
-		mockService.On("CreateEmployee", createRequest).Return(expectedData, nil)
+		mockService.On("CreateEmployee", appContext, createRequest).Return(expectedData, nil).Once()
 		// Отправляем тестовый запрос на веб сервер
 		resp, err := app.Test(req)
 
@@ -197,8 +198,8 @@ LOG_DEVELOP_MODE=true`
 	//create error by name
 	t.Run("when create employee then should return error", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
-		testName := "J"                 // Используем то же имя, что и в теле запроса
 
+		testName := "J" // Используем то же имя, что и в теле запроса
 		createRequest := CreateRequest{
 			Name: testName,
 		}
@@ -211,7 +212,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// Настраиваем поведение мока в тесте
-		mockService.On("CreateEmployee", createRequest).Return(Response{}, expectError).Once()
+		mockService.On("CreateEmployee", appContext, createRequest).Return(Response{}, expectError).Once()
 		// Отправляем тестовый запрос на веб сервер
 		resp, err := app.Test(req)
 		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
@@ -250,7 +251,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// Настраиваем поведение мока в тесте
-		mockService.On("CreateEmployee", createRequest).Return(Response{}, expectError).Once()
+		mockService.On("CreateEmployee", appContext, createRequest).Return(Response{}, expectError).Once()
 		// Отправляем тестовый запрос на веб сервер
 		resp, err := app.Test(req)
 		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
@@ -301,8 +302,13 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
-		mockService.On("UpdateEmployee", testID, mock.AnythingOfType("UpdateRequest")).Return(expectedData, nil).Once()
-		// 5. Выполнение запроса
+		mockService.On(
+			"UpdateEmployee",
+			appContext,
+			testID,
+			mock.AnythingOfType("UpdateRequest"),
+		).Return(expectedData, nil).Once() // 5. Выполнение запроса
+
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatal(err)
@@ -373,7 +379,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
-		mockService.On("UpdateEmployee", testID, mock.AnythingOfType("UpdateRequest")).Return(Response{}, expectError).Once()
+		mockService.On("UpdateEmployee", appContext, testID, mock.AnythingOfType("UpdateRequest")).Return(Response{}, expectError).Once()
 		// 5. Выполнение запроса
 		resp, err := app.Test(req)
 		if err != nil {
@@ -478,7 +484,7 @@ LOG_DEVELOP_MODE=true`
 		}
 
 		// 2. Настройка мока
-		mockService.On("FindAllByIds", requestIDs).Return(expectedData, nil).Once()
+		mockService.On("FindAllByIds", appContext, requestIDs).Return(expectedData, nil).Once()
 
 		// 3. Создание запроса
 		req := httptest.NewRequest("GET", "/api/v1/employees/ids?ids="+idParam, nil)
@@ -544,7 +550,7 @@ LOG_DEVELOP_MODE=true`
 		idParam := "1,2,3"
 
 		// 2. Настройка мока
-		mockService.On("FindAllByIds", requestIDs).Return([]Response{}, nil).Once()
+		mockService.On("FindAllByIds", appContext, requestIDs).Return([]Response{}, nil).Once()
 
 		// 3. Создание запроса
 		req := httptest.NewRequest("GET", "/api/v1/employees/ids?ids="+idParam, nil)
@@ -580,7 +586,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// 4. Настройка мока (убедитесь, что ожидаете правильные параметры)
-		mockService.On("DeleteById", testID).Return(response, nil)
+		mockService.On("DeleteById", appContext, testID).Return(response, nil).Once()
 		// 5. Выполнение запроса
 		resp, err := app.Test(req)
 		if err != nil {
@@ -632,7 +638,7 @@ LOG_DEVELOP_MODE=true`
 		expectedError := errors.New("Invalid ID format")
 
 		// 2. Настройка мока на возврат ошибки
-		mockService.On("DeleteById", requestIDs).Return(Response{}, expectedError).Once()
+		mockService.On("DeleteById", appContext, requestIDs).Return(Response{}, expectedError).Once()
 
 		// 3. Создание запроса
 		req := httptest.NewRequest("DELETE", "/api/v1/employees/"+requestIDs, nil)
@@ -704,7 +710,7 @@ LOG_DEVELOP_MODE=true`
 		req.Header.Set("Content-Type", "application/json")
 
 		// 2. Настройка мока (возвращаем nil, так как это DELETE)
-		mockService.On("DeleteByIds", requestIDs).Return(Response{}, nil).Once()
+		mockService.On("DeleteByIds", appContext, requestIDs).Return(Response{}, nil).Once()
 
 		// Перед app.Test(req)
 		routes := app.GetRoutes()
@@ -802,7 +808,7 @@ LOG_DEVELOP_MODE=true`
 		expectedError := errors.New("database error")
 
 		// 2. Настройка мока на возврат ошибки
-		mockService.On("DeleteByIds", requestIDs).Return(Response{}, expectedError).Once()
+		mockService.On("DeleteByIds", appContext, requestIDs).Return(Response{}, expectedError).Once()
 
 		// 3. Создание запроса
 		req := httptest.NewRequest("DELETE", "/api/v1/employees/ids?ids="+idParam, nil)

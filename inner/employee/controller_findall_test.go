@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
@@ -38,6 +39,7 @@ LOG_DEVELOP_MODE=true`
 	// Тестируем
 	cfg := config.GetConfig(envFile)
 	var logger = common.NewLogger(cfg) // Создаем логгер
+	appContext := context.Background() // Создаем контекст
 
 	app := fiber.New()
 	middleware.RegisterMiddleware(app, logger) // middleware func
@@ -65,7 +67,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 1. Успешный запрос с данными
 	t.Run("SuccessWithData", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{testEmployee}, nil).Once()
+		mockService.On("FindAll", appContext).Return([]Response{testEmployee}, nil).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/", nil)
 		resp, err := app.Test(req)
@@ -95,7 +97,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 2. Успешный запрос без данных
 	t.Run("SuccessEmpty", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, nil).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, nil).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/", nil)
 		resp, err := app.Test(req)
@@ -125,7 +127,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 3. Ошибка поиска
 	t.Run("FindAllFailed", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, domain.ErrFindAllFailed).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, domain.ErrFindAllFailed).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/", nil)
 		resp, err := app.Test(req)
@@ -157,7 +159,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 4. Внутренняя ошибка
 	t.Run("InternalError", func(t *testing.T) {
-		mockService.On("FindAll").Return([]Response{}, errors.New("db error")).Once()
+		mockService.On("FindAll", appContext).Return([]Response{}, errors.New("db error")).Once()
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/", nil)
 		resp, err := app.Test(req)
