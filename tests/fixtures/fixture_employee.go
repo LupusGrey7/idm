@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"context"
 	"fmt"
 	"idm/inner/employee"
 	"time"
@@ -17,18 +18,18 @@ func NewFixtureEmployee(employees *employee.Repository) *FixtureEmployee {
 }
 
 // Employee - создает тестового сотрудника
-func (f *FixtureEmployee) Employee(name string) int64 {
-	employeeEntity := &employee.Entity{
+func (f *FixtureEmployee) Employee(ctx context.Context, name string) int64 {
+	employeeEntity := employee.Entity{
 		Name: name,
 	}
-	var result, err = f.employees.CreateEmployee(employeeEntity)
+	var result, err = f.employees.CreateEmployee(ctx, &employeeEntity)
 	if err != nil {
 		panic(err)
 	}
 	return result.Id
 }
 
-func (f *FixtureEmployee) EmployeeTx(name string) (int64, error) {
+func (f *FixtureEmployee) EmployeeTx(ctx context.Context, name string) (int64, error) {
 	employeeEntity := &employee.Entity{
 		Name: name,
 	}
@@ -51,7 +52,7 @@ func (f *FixtureEmployee) EmployeeTx(name string) (int64, error) {
 		}
 	}()
 
-	isExist, err := f.employees.FindByNameTx(tx, employeeEntity.Name)
+	isExist, err := f.employees.FindByNameTx(ctx, tx, employeeEntity.Name)
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +60,7 @@ func (f *FixtureEmployee) EmployeeTx(name string) (int64, error) {
 	if isExist {
 		return 0, fmt.Errorf("employee with name %s already exists", employeeEntity.Name)
 	}
-	result, err := f.employees.CreateEntityTx(tx, employeeEntity)
+	result, err := f.employees.CreateEntityTx(ctx, tx, employeeEntity)
 	if err != nil {
 		panic(err)
 	}

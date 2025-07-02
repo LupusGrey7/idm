@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"errors"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
@@ -16,12 +17,12 @@ type StubEmployeeRepository struct {
 	err      error
 }
 
-func (s *StubEmployeeRepository) CreateEntityTx(tx *sqlx.Tx, entity *Entity) (int64, error) {
+func (s *StubEmployeeRepository) CreateEntityTx(ctx context.Context, tx *sqlx.Tx, entity *Entity) (int64, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
+func (s *StubEmployeeRepository) FindByNameTx(ctx context.Context, tx *sqlx.Tx, name string) (isExists bool, err error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -31,17 +32,17 @@ func (s *StubEmployeeRepository) BeginTransaction() (tx *sqlx.Tx, err error) {
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindAllEmployees() ([]Entity, error) {
+func (s *StubEmployeeRepository) FindAllEmployees(ctx context.Context) ([]Entity, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindAllEmployeesByIds(ids []int64) ([]Entity, error) {
+func (s *StubEmployeeRepository) FindAllEmployeesByIds(ctx context.Context, ids []int64) ([]Entity, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) CreateEmployee(entity *Entity) (Entity, error) {
+func (s *StubEmployeeRepository) CreateEmployee(ctx context.Context, entity *Entity) (Entity, error) {
 	return Entity{
 		Id:        1,
 		Name:      entity.Name,
@@ -50,28 +51,29 @@ func (s *StubEmployeeRepository) CreateEmployee(entity *Entity) (Entity, error) 
 	}, nil
 }
 
-func (s *StubEmployeeRepository) UpdateEmployee(entity *Entity) error {
+func (s *StubEmployeeRepository) UpdateEmployee(ctx context.Context, entity *Entity) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) DeleteEmployeeById(id int64) error {
+func (s *StubEmployeeRepository) DeleteEmployeeById(ctx context.Context, id int64) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) DeleteAllEmployeesByIds(ids []int64) error {
+func (s *StubEmployeeRepository) DeleteAllEmployeesByIds(ctx context.Context, ids []int64) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *StubEmployeeRepository) FindById(id int64) (Entity, error) {
+func (s *StubEmployeeRepository) FindById(ctx context.Context, id int64) (Entity, error) {
 	return s.employee, s.err
 }
 
 func TestEmployeeService_GetEmployeeById(t *testing.T) {
 	// создаём экземпляр объекта с ассерт c функциями
 	var a = assert.New(t)
+	appContext := context.Background()
 
 	t.Run("when get Employee By ID then returns employee", func(t *testing.T) {
 		// Создаём тестовые данные
@@ -96,7 +98,7 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
 		validator.On("Validate", mock.Anything).Return(nil)
 		// Вызываем метод сервиса
-		got, err := service.FindById(int64(1))
+		got, err := service.FindById(appContext, (1))
 
 		// Проверяем результаты
 		a.NoError(err)
@@ -116,7 +118,7 @@ func TestEmployeeService_GetEmployeeById(t *testing.T) {
 
 		validator.On("Validate", mock.Anything).Return(errors.New("error finding employee with id 1: employee not found"))
 		// Вызываем метод сервиса
-		got, err := service.FindById(1)
+		got, err := service.FindById(appContext, 1)
 
 		// Проверяем результаты
 		a.Error(err)

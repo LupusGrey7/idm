@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"context"
 	"idm/inner/role"
 	"time"
 )
@@ -15,13 +16,17 @@ func NewFixtureRole(roles *role.Repository) *FixtureRole {
 }
 
 // Role создает тестовую роль
-func (f *FixtureRole) Role(name string, employeeID *int64) int64 {
+func (f *FixtureRole) Role(
+	ctx context.Context,
+	name string,
+	employeeID *int64,
+) int64 {
 	roleEntity := &role.Entity{
 		Name:       name,
 		EmployeeID: employeeID,
 	}
 
-	var result, err = f.role.CreateRole(roleEntity)
+	var result, err = f.role.CreateRole(ctx, roleEntity)
 	if err != nil {
 		panic(err)
 	}

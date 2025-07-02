@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"idm/inner/role"
 	"idm/tests/fixtures"
@@ -13,9 +14,12 @@ import (
 
 func TestRoleRepository(t *testing.T) {
 	//arrange
+	appContext := context.Background() //— если не нужно проверить таймауты
 	a := assert.New(t)
+
 	var db = testutils.InitTestDB() //add connect, run migrations /was- var db = database.ConnectDb()
 	fixture := fixtures.NewFixture(db)
+
 	var clearDatabase = func() {
 		//db.MustExec("delete from roles")
 		fixture.CleanDatabase() // truncate tables
@@ -38,10 +42,10 @@ func TestRoleRepository(t *testing.T) {
 
 	t.Run("when create and then find role by id", func(t *testing.T) {
 
-		empID := fixtureEmployee.Employee("John Doe") // Создаём сотрудника
-		roleID := fixtureRole.Role("DBA", &empID)     // Создаём роль с сотрудником
+		empID := fixtureEmployee.Employee(appContext, "John Doe") // Создаём сотрудника
+		roleID := fixtureRole.Role(appContext, "DBA", &empID)     // Создаём роль с сотрудником
 
-		got, err := repo.FindById(roleID)
+		got, err := repo.FindById(appContext, roleID)
 
 		a.Nil(err)
 		a.NotEmpty(got)
@@ -57,11 +61,11 @@ func TestRoleRepository(t *testing.T) {
 
 	t.Run("update an role by id", func(t *testing.T) {
 		// Создаём сотрудника и роль
-		empID := fixtureEmployee.Employee("John Doe")
-		roleID := fixtureRole.Role("DBA", &empID)
+		empID := fixtureEmployee.Employee(appContext, "John Doe")
+		roleID := fixtureRole.Role(appContext, "DBA", &empID)
 
 		var roleEntity = fixtureRole.RoleUpdate(roleID, "DBA", &empID, time.Now(), time.Now())
-		err := repo.UpdateRole(&roleEntity)
+		err := repo.UpdateRole(appContext, &roleEntity)
 
 		a.Nil(err)
 
@@ -69,12 +73,12 @@ func TestRoleRepository(t *testing.T) {
 	})
 
 	t.Run("find all roles", func(t *testing.T) {
-		var empID1 = fixtureEmployee.Employee("John Doe")
-		var empID2 = fixtureEmployee.Employee("Alice Marcus")
-		roleId := fixtureRole.Role("DBU", &empID1)
-		_ = fixtureRole.Role("DBA", &empID2)
+		var empID1 = fixtureEmployee.Employee(appContext, "John Doe")
+		var empID2 = fixtureEmployee.Employee(appContext, "Alice Marcus")
+		roleId := fixtureRole.Role(appContext, "DBU", &empID1)
+		_ = fixtureRole.Role(appContext, "DBA", &empID2)
 
-		got, err := repo.FindAllRoles()
+		got, err := repo.FindAllRoles(appContext)
 
 		a.Nil(err)
 		a.NotEmpty(got)
@@ -88,13 +92,13 @@ func TestRoleRepository(t *testing.T) {
 	})
 
 	t.Run("find all roles by ids", func(t *testing.T) {
-		var empID1 = fixtureEmployee.Employee("John Doe")
-		var empID2 = fixtureEmployee.Employee("Alice Marcus")
-		roleOneId := fixtureRole.Role("DBU", &empID1)
-		roleTwoId := fixtureRole.Role("DBA", &empID2)
+		var empID1 = fixtureEmployee.Employee(appContext, "John Doe")
+		var empID2 = fixtureEmployee.Employee(appContext, "Alice Marcus")
+		roleOneId := fixtureRole.Role(appContext, "DBU", &empID1)
+		roleTwoId := fixtureRole.Role(appContext, "DBA", &empID2)
 		var ids = []int64{roleOneId, roleTwoId}
 
-		got, err := repo.FindAllRolesByIds(ids)
+		got, err := repo.FindAllRolesByIds(appContext, ids)
 
 		a.Nil(err)
 		a.NotEmpty(got)
@@ -108,16 +112,16 @@ func TestRoleRepository(t *testing.T) {
 	})
 
 	t.Run("delete all roles by ids", func(t *testing.T) {
-		roleOneId := fixtureRole.Role("DBU", nil)
-		roleTwoId := fixtureRole.Role("DBA", nil)
+		roleOneId := fixtureRole.Role(appContext, "DBU", nil)
+		roleTwoId := fixtureRole.Role(appContext, "DBA", nil)
 		var ids = []int64{roleOneId, roleTwoId}
 
-		err := repo.DeleteAllRolesByIds(ids)
+		err := repo.DeleteAllRolesByIds(appContext, ids)
 
 		// Assert - Проверка, что оба сотрудника удалены
 		a.Nil(err)
 		for _, id := range ids {
-			_, err := repo.FindById(id)
+			_, err := repo.FindById(appContext, id)
 			a.Error(err)
 			a.Contains(err.Error(), "no rows")
 		}
@@ -127,15 +131,15 @@ func TestRoleRepository(t *testing.T) {
 
 	t.Run("delete role by id", func(t *testing.T) {
 		// Создаём сотрудника и роль
-		empID := fixtureEmployee.Employee("John Doe")
-		roleID := fixtureRole.Role("DBA", &empID)
+		empID := fixtureEmployee.Employee(appContext, "John Doe")
+		roleID := fixtureRole.Role(appContext, "DBA", &empID)
 
 		// Удаляем роль
-		err := repo.DeleteRoleById(roleID)
+		err := repo.DeleteRoleById(appContext, roleID)
 		a.Nil(err, "DeleteRoleById should not return error")
 
 		// Пытаемся найти удалённую роль
-		res, err := repo.FindById(roleID)
+		res, err := repo.FindById(appContext, roleID)
 		expected := role.Entity{}
 
 		// Проверяем, что роль не найдена
@@ -156,20 +160,20 @@ func TestRoleRepository(t *testing.T) {
 
 	t.Run("when delete employee, role should be deleted (CASCADE)", func(t *testing.T) {
 		// Создаём сотрудника и роль
-		empID := fixtureEmployee.Employee("John Doe")
-		roleID := fixtureRole.Role("DBA", &empID)
+		empID := fixtureEmployee.Employee(appContext, "John Doe")
+		roleID := fixtureRole.Role(appContext, "DBA", &empID)
 
 		// Проверяем, что роль привязана к сотруднику
-		role, err := repo.FindById(roleID)
+		role, err := repo.FindById(appContext, roleID)
 		assert.NoError(t, err, "Role should exist")
 		assert.Equal(t, empID, *role.EmployeeID, "Role should be linked to employee")
 
 		// Удаляем сотрудника (должно удалить роль из-за ON DELETE CASCADE)
-		err = employeeRepo.DeleteEmployeeById(empID)
+		err = employeeRepo.DeleteEmployeeById(appContext, empID)
 		assert.NoError(t, err, "DeleteEmployeeById should not fail")
 
 		// Проверяем, что роль удалилась
-		_, err = repo.FindById(roleID)
+		_, err = repo.FindById(appContext, roleID)
 		assert.Error(t, err, "Role should be deleted after employee deletion")
 		assert.Contains(t, err.Error(), "no rows in result set", "Error should be 'not found'")
 

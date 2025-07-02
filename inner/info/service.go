@@ -1,6 +1,7 @@
 package info
 
 import (
+	"context"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -26,12 +27,16 @@ func NewService(
 	}
 }
 
-func (s *Service) CheckDB() error {
+func (s *Service) CheckDB(ctx context.Context) error {
 	if s.db == nil {
 		return fmt.Errorf("database connection is not initialized ")
 	}
-	err := s.db.Ping()
-	s.logger.Debug("DB PING status IS: %s", zap.Error(err))
+
+	err := s.db.PingContext(ctx) //Контекст контролирует таймауты/отмену операций в gracefulShutdown
+	s.logger.Debug(
+		"DB PING status IS:",
+		zap.Any("error", err),
+	)
 
 	return err
 }

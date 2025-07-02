@@ -1,6 +1,7 @@
 package role
 
 import (
+	"context"
 	"fmt"
 	"idm/inner/domain"
 )
@@ -11,13 +12,13 @@ type Service struct {
 }
 
 type Repo interface {
-	FindAllRoles() ([]Entity, error)
-	FindAllRolesByIds(ids []int64) ([]Entity, error)
-	FindById(id int64) (Entity, error)
-	CreateRole(entity *Entity) (Entity, error)
-	UpdateRole(entity *Entity) error
-	DeleteRoleById(id int64) error
-	DeleteAllRolesByIds(ids []int64) error
+	FindAllRoles(ctx context.Context) ([]Entity, error)
+	FindAllRolesByIds(ctx context.Context, ids []int64) ([]Entity, error)
+	FindById(ctx context.Context, id int64) (Entity, error)
+	CreateRole(ctx context.Context, entity *Entity) (Entity, error)
+	UpdateRole(ctx context.Context, entity *Entity) error
+	DeleteRoleById(ctx context.Context, id int64) error
+	DeleteAllRolesByIds(ctx context.Context, ids []int64) error
 }
 type Validator interface {
 	Validate(request any) error
@@ -32,8 +33,8 @@ func NewService(repo Repo, validator Validator) *Service {
 }
 
 // FindAll - найти все элементы коллекции
-func (svc *Service) FindAll() ([]Response, error) {
-	var roles, err = svc.repo.FindAllRoles()
+func (svc *Service) FindAll(ctx context.Context) ([]Response, error) {
+	var roles, err = svc.repo.FindAllRoles(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error finding Roles : %w", err)
 	}
@@ -46,13 +47,16 @@ func (svc *Service) FindAll() ([]Response, error) {
 }
 
 // FindAllByIds - найти слайс элементов коллекции по слайсу их id
-func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
+func (svc *Service) FindAllByIds(
+	ctx context.Context,
+	ids []int64,
+) ([]Response, error) {
 	request := FindAllByIdsRequest{IDs: ids}                // Создаем DTO для валидации
 	if err := svc.validator.Validate(request); err != nil { // Валидируем запрос
 		return []Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
-	var roles, err = svc.repo.FindAllRolesByIds(ids)
+	var roles, err = svc.repo.FindAllRolesByIds(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("error find all Roles with IDs: %d %w", ids, err)
 	}
@@ -65,7 +69,10 @@ func (svc *Service) FindAllByIds(ids []int64) ([]Response, error) {
 	return responses, err
 }
 
-func (svc *Service) FindById(id int64) (Response, error) {
+func (svc *Service) FindById(
+	ctx context.Context,
+	id int64,
+) (Response, error) {
 	request := FindByIDRequest{ID: id}        // Создаем DTO для валидации
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
@@ -73,7 +80,7 @@ func (svc *Service) FindById(id int64) (Response, error) {
 		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
-	entity, err := svc.repo.FindById(id)
+	entity, err := svc.repo.FindById(ctx, id)
 	if err != nil {
 		// в случае ошибки, вернём пустую структуру Response и обёрнутую нами ошибку
 		return Response{}, fmt.Errorf("error finding role with id %d: %w", id, err)
@@ -83,7 +90,10 @@ func (svc *Service) FindById(id int64) (Response, error) {
 	return entity.ToResponse(), nil
 }
 
-func (svc *Service) CreateRole(request CreateRequest) (Response, error) {
+func (svc *Service) CreateRole(
+	ctx context.Context,
+	request CreateRequest,
+) (Response, error) {
 	//validate
 	var err = svc.validator.Validate(request) // Валидируем запрос
 	if err != nil {
@@ -93,7 +103,7 @@ func (svc *Service) CreateRole(request CreateRequest) (Response, error) {
 
 	//save
 	entityRole := request.ToEntity()
-	entityRsl, err := svc.repo.CreateRole(entityRole)
+	entityRsl, err := svc.repo.CreateRole(ctx, entityRole)
 	if err != nil {
 		return Response{}, fmt.Errorf("error creating Role with name %s: %w", entityRole.Name, err)
 	}
@@ -101,7 +111,11 @@ func (svc *Service) CreateRole(request CreateRequest) (Response, error) {
 	return entityRsl.ToResponse(), nil
 }
 
-func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error) {
+func (svc *Service) UpdateRole(
+	ctx context.Context,
+	id int64,
+	request UpdateRequest,
+) (Response, error) {
 	request.Id = id
 	var err = svc.validator.Validate(request)
 	if err != nil {
@@ -109,7 +123,7 @@ func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error
 	}
 
 	entity := request.ToEntity()
-	err = svc.repo.UpdateRole(entity)
+	err = svc.repo.UpdateRole(ctx, entity)
 	if err != nil {
 		return Response{}, fmt.Errorf("error updating Role with name %s: %w", entity.Name, err)
 	}
@@ -117,13 +131,16 @@ func (svc *Service) UpdateRole(id int64, request UpdateRequest) (Response, error
 	return entity.ToResponse(), err
 }
 
-func (svc *Service) DeleteById(id int64) (Response, error) {
+func (svc *Service) DeleteById(
+	ctx context.Context,
+	id int64,
+) (Response, error) {
 	requestId := DeleteByIdRequest{ID: id}
 	var err = svc.validator.Validate(requestId)
 	if err != nil {
 		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
-	err = svc.repo.DeleteRoleById(id)
+	err = svc.repo.DeleteRoleById(ctx, id)
 	if err != nil {
 		return Response{}, fmt.Errorf("error delete Role by ID: %d, %w", id, err)
 	}
@@ -131,14 +148,17 @@ func (svc *Service) DeleteById(id int64) (Response, error) {
 	return Response{}, err
 }
 
-func (svc *Service) DeleteByIds(ids []int64) (Response, error) {
+func (svc *Service) DeleteByIds(
+	ctx context.Context,
+	ids []int64,
+) (Response, error) {
 	requestIds := DeleteByIdsRequest{IDs: ids}
 	var err = svc.validator.Validate(requestIds)
 	if err != nil {
 		return Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
-	err = svc.repo.DeleteAllRolesByIds(ids)
+	err = svc.repo.DeleteAllRolesByIds(ctx, ids)
 	if err != nil {
 		return Response{}, fmt.Errorf("error deleting Roles by IDs: %d, %w", ids, err)
 	}

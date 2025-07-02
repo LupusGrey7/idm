@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"context"
 	"errors"
 	"github.com/gofiber/fiber/v2" // Версия 2 - позволяет выводить ошибку
 	"github.com/jmoiron/sqlx"
@@ -29,15 +30,15 @@ type Controller struct {
 
 // Svc - интерфейс сервиса employee.Service
 type Svc interface {
-	FindAll() ([]Response, error)
-	FindById(id int64) (Response, error)
-	FindAllByIds(ids []int64) ([]Response, error)
-	CreateEmployee(request CreateRequest) (Response, error)
-	CreateEmployeeTx(request CreateRequest) (int64, error)
-	UpdateEmployee(id int64, request UpdateRequest) (Response, error)
-	DeleteById(id int64) (Response, error)
-	DeleteByIds(ids []int64) (Response, error)
-	FindEmployeeByNameTx(name string) (bool, error)
+	FindAll(ctx context.Context) ([]Response, error)
+	FindById(ctx context.Context, id int64) (Response, error)
+	FindAllByIds(ctx context.Context, ids []int64) ([]Response, error)
+	CreateEmployee(ctx context.Context, request CreateRequest) (Response, error)
+	CreateEmployeeTx(ctx context.Context, request CreateRequest) (int64, error)
+	UpdateEmployee(ctx context.Context, id int64, request UpdateRequest) (Response, error)
+	DeleteById(ctx context.Context, id int64) (Response, error)
+	DeleteByIds(ctx context.Context, ids []int64) (Response, error)
+	FindEmployeeByNameTx(ctx context.Context, name string) (bool, error)
 	CloseTx(*sqlx.Tx, error, string)
 }
 
@@ -70,6 +71,8 @@ func (c *Controller) RegisterRoutes() {
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
 func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 	var request CreateRequest
 
@@ -92,7 +95,7 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	)
 
 	// Вызов сервиса
-	newEmployee, err := c.employeeService.CreateEmployee(request)
+	newEmployee, err := c.employeeService.CreateEmployee(appContext, request)
 	if err != nil {
 		c.logger.Error( // логируем ошибку
 			"When the create employee ended with an error:",
@@ -117,6 +120,8 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 	pathUrl := ctx.Path()                          // Получаем путь запроса
 	idStr := ctx.Params("id")                      // Анмаршалим path var запроса
@@ -133,7 +138,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	response, err := c.employeeService.FindById(employeeID)
+	response, err := c.employeeService.FindById(appContext, employeeID)
 	if err != nil {
 		c.logger.Error(
 			"When the get Employee ended with an error:",
@@ -158,9 +163,11 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
-	response, err := c.employeeService.FindAll()
+	response, err := c.employeeService.FindAll(appContext)
 	if err != nil {
 		c.logger.Error(
 			"When the find for ALl Employees ended with an error:",
@@ -179,6 +186,8 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idsParam := ctx.Query("ids")
@@ -206,7 +215,7 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 
-	response, err := c.employeeService.FindAllByIds(ids)
+	response, err := c.employeeService.FindAllByIds(appContext, ids)
 	if err != nil {
 		c.logger.Error(
 			"When the search for all employees by identifiers ended with an error: %s",
@@ -226,6 +235,8 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Update(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idStr := ctx.Params("id")
@@ -251,7 +262,7 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	updatedEmployee, err := c.employeeService.UpdateEmployee(employeeID, request)
+	updatedEmployee, err := c.employeeService.UpdateEmployee(appContext, employeeID, request)
 	if err != nil {
 		c.logger.Error(
 			"When the update for employee ended with an error: %s",
@@ -271,6 +282,8 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idStr := ctx.Params("id")
@@ -285,7 +298,7 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	response, err := c.employeeService.DeleteById(employeeID)
+	response, err := c.employeeService.DeleteById(appContext, employeeID)
 	if err != nil {
 		c.logger.Error(
 			"When the delete an Employee By ID request ended with an error: %s",
@@ -305,6 +318,8 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idsParam := ctx.Query("ids")
@@ -333,7 +348,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 
-	response, err := c.employeeService.DeleteByIds(ids)
+	response, err := c.employeeService.DeleteByIds(appContext, ids)
 	if err != nil {
 		c.logger.Error(
 			"When the delete an Delete Employees By Ids ended with an error: %s",
@@ -353,6 +368,8 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	var request CreateRequest
@@ -366,7 +383,7 @@ func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	response, err := c.employeeService.CreateEmployeeTx(request)
+	response, err := c.employeeService.CreateEmployeeTx(appContext, request)
 	if err != nil {
 		c.logger.Error(
 			"When the create Employee ended with an error: %s",

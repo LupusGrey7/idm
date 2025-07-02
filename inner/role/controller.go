@@ -1,6 +1,7 @@
 package role
 
 import (
+	"context"
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -42,13 +43,13 @@ func NewController(
 }
 
 type Svc interface {
-	FindById(id int64) (Response, error)
-	CreateRole(request CreateRequest) (Response, error)
-	UpdateRole(id int64, request UpdateRequest) (Response, error)
-	FindAll() ([]Response, error)
-	FindAllByIds(ids []int64) ([]Response, error)
-	DeleteById(id int64) (Response, error)
-	DeleteByIds(ids []int64) (Response, error)
+	FindById(ctx context.Context, id int64) (Response, error)
+	CreateRole(ctx context.Context, request CreateRequest) (Response, error)
+	UpdateRole(ctx context.Context, id int64, request UpdateRequest) (Response, error)
+	FindAll(ctx context.Context) ([]Response, error)
+	FindAllByIds(ctx context.Context, ids []int64) ([]Response, error)
+	DeleteById(ctx context.Context, id int64) (Response, error)
+	DeleteByIds(ctx context.Context, ids []int64) (Response, error)
 }
 
 // RegisterRoutes - функция для регистрации маршрутов
@@ -66,9 +67,11 @@ func (c *Controller) RegisterRoutes() {
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
-	response, err := c.roleService.FindAll()
+	response, err := c.roleService.FindAll(appContext)
 	if err != nil {
 		c.logger.Error(
 			"FindAll ended with error",           // Сообщение без форматирования - zap сам обработает
@@ -94,6 +97,8 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idStr := ctx.Params("id")
@@ -109,7 +114,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	response, err := c.roleService.FindById(roleID)
+	response, err := c.roleService.FindById(appContext, roleID)
 	if err != nil {
 		c.logger.Error(
 			"Failed to get roles By ID",
@@ -129,6 +134,8 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idsParam := ctx.Query("ids")
@@ -156,7 +163,7 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 
-	response, err := c.roleService.FindAllByIds(ids)
+	response, err := c.roleService.FindAllByIds(appContext, ids)
 	if err != nil {
 		c.logger.Error("When the parse request parameter an FindAll Role By IDs ended with an error",
 			zap.Int("ids", len(idsParam)),
@@ -174,6 +181,8 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	var request CreateRequest
@@ -187,7 +196,7 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	newRoleId, err := c.roleService.CreateRole(request)
+	newRoleId, err := c.roleService.CreateRole(appContext, request)
 	if err != nil {
 		c.logger.Error(
 			"When the create role ended with an error",
@@ -207,6 +216,8 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idStr := ctx.Params("id")
@@ -232,7 +243,7 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
 
-	updatedRole, err := c.roleService.UpdateRole(roleID, request)
+	updatedRole, err := c.roleService.UpdateRole(appContext, roleID, request)
 	if err != nil {
 		c.logger.Error("When the update role ended with an error",
 			zap.Error(err),
@@ -252,6 +263,8 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idStr := ctx.Params("id")
@@ -266,7 +279,7 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
 
-	response, err := c.roleService.DeleteById(roleID)
+	response, err := c.roleService.DeleteById(appContext, roleID)
 	if err != nil {
 		c.logger.Error("When the delete role ended with an error",
 			zap.Error(err),
@@ -284,6 +297,8 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
+
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	idsParam := ctx.Query("ids")
@@ -310,7 +325,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 		ids = append(ids, id)
 	}
 
-	response, err := c.roleService.DeleteByIds(ids)
+	response, err := c.roleService.DeleteByIds(appContext, ids)
 	if err != nil {
 		c.logger.Error("When the delete role ended with an error",
 			zap.Error(err),

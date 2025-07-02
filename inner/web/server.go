@@ -25,10 +25,11 @@ type Server struct {
 
 // NewServer - функция-конструктор
 func NewServer(logger *common.Logger) *Server {
-
 	// создаём новый web-сервер
 	app := fiber.New()
-	middleware.RegisterMiddleware(app, logger) // регистрация middleware, передаем logger
+
+	// регистрация middleware, передаем logger
+	middleware.RegisterMiddleware(app, logger)
 
 	groupInternal := app.Group(InternalPath)          // Группа непубличного API "/internal"
 	groupApi := app.Group(APIPrefix)                  // создаём группу "/api" - Group is used for Routes
