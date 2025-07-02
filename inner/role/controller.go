@@ -19,6 +19,7 @@ const (
 	internalServerError  = "Internal server error"
 	invalidIDFormat      = "Invalid ID format"
 	invalidRequestBody   = "Invalid request body"
+	invalidParseIDs      = "When the parse request parameter an FindAll Role By IDs ended with an error"
 )
 
 type Controller struct {
@@ -65,11 +66,14 @@ func (c *Controller) RegisterRoutes() {
 // -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	response, err := c.roleService.FindAll()
 	if err != nil {
 		c.logger.Error(
 			"FindAll ended with error",           // Сообщение без форматирования - zap сам обработает
 			zap.Error(err),                       // Ошибка
+			zap.String("request_id", requestId),  // Добавляем request_id в лог
 			zap.Int("roles_size", len(response)), // Более явное название поля
 		)
 
@@ -82,12 +86,16 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	}
 	c.logger.Debug(
 		"Get All Roles have size",
+		zap.String("request_id", requestId),
 		zap.Int("roles_size", len(response)),
 	)
+
 	return http.OkResponse(ctx, response)
 }
 
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -95,6 +103,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 			"ID parse error when get role",
 			zap.Error(err),
 			zap.String("id", idStr),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
@@ -106,6 +115,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 			"Failed to get roles By ID",
 			zap.Error(err),
 			zap.Int64("id", roleID),
+			zap.String("request_id", requestId),
 		)
 
 		switch {
@@ -119,10 +129,14 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
-		c.logger.Error("When the parse request parameter an FindAll Role By Ids ended with an error",
+		c.logger.Error(
+			invalidParseIDs,
 			zap.String("ids", idsParam),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
@@ -132,6 +146,11 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			c.logger.Error(invalidParseIDs,
+				zap.Int("ids", len(idsParam)),
+				zap.String("request_id", requestId),
+			)
+
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat+idStr)
 		}
 		ids = append(ids, id)
@@ -139,6 +158,10 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.roleService.FindAllByIds(ids)
 	if err != nil {
+		c.logger.Error("When the parse request parameter an FindAll Role By IDs ended with an error",
+			zap.Int("ids", len(idsParam)),
+			zap.String("request_id", requestId),
+		)
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
@@ -151,9 +174,15 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	var request CreateRequest
 	if err := ctx.BodyParser(&request); err != nil {
-		c.logger.Error("body parse error when create role", zap.Error(err))
+		c.logger.Error(
+			"body parse error when create role",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
@@ -163,6 +192,7 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 		c.logger.Error(
 			"When the create role ended with an error",
 			zap.Error(err),
+			zap.String("request_id", requestId),
 		)
 
 		switch {
@@ -177,12 +207,15 @@ func (c *Controller) CreateRole(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.logger.Error("ID parse error when update role",
+		c.logger.Error("ID parse error when Update Role",
 			zap.Error(err),
 			zap.String("id", idStr),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
@@ -193,6 +226,7 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 		c.logger.Error(
 			"body parse error when update role",
 			zap.Error(err),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
@@ -203,6 +237,7 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 		c.logger.Error("When the update role ended with an error",
 			zap.Error(err),
 			zap.Int64("id", roleID),
+			zap.String("request_id", requestId),
 		)
 
 		switch {
@@ -217,12 +252,15 @@ func (c *Controller) UpdateRole(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idStr := ctx.Params("id")
 	roleID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		c.logger.Error("ID parse error when delete role",
+		c.logger.Error("ID parse error when Delete Role",
 			zap.Error(err),
 			zap.String("id", idStr),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
@@ -246,10 +284,13 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
 	idsParam := ctx.Query("ids")
 	if idsParam == "" {
 		c.logger.Error("When the parse request parameter an Delete Role By Ids ended with an error",
-			zap.String("ids", idsParam),
+			zap.Int("ids", len(idsParam)),
+			zap.String("request_id", requestId),
 		)
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, "Missing ids parameter")
@@ -259,6 +300,11 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	for _, idStr := range strings.Split(idsParam, ",") {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
+			c.logger.Error("When the parse request parameter an Delete Role By Ids ended with an error",
+				zap.Int("ids", len(idsParam)),
+				zap.String("request_id", requestId),
+			)
+
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat+idStr)
 		}
 		ids = append(ids, id)
@@ -266,6 +312,12 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 
 	response, err := c.roleService.DeleteByIds(ids)
 	if err != nil {
+		c.logger.Error("When the delete role ended with an error",
+			zap.Error(err),
+			zap.Int("ids", len(ids)),
+			zap.String("request_id", requestId),
+		)
+
 		switch {
 		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())

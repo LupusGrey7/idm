@@ -2,6 +2,8 @@ package web
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"idm/inner/common"
+	"idm/inner/web/middleware"
 )
 
 const (
@@ -22,10 +24,12 @@ type Server struct {
 }
 
 // NewServer - функция-конструктор
-func NewServer() *Server {
+func NewServer(logger *common.Logger) *Server {
 
 	// создаём новый web-сервер
 	app := fiber.New()
+	middleware.RegisterMiddleware(app, logger) // регистрация middleware, передаем logger
+
 	groupInternal := app.Group(InternalPath)          // Группа непубличного API "/internal"
 	groupApi := app.Group(APIPrefix)                  // создаём группу "/api" - Group is used for Routes
 	groupApiV1 := groupApi.Group(APIVersion)          // создаём подгруппу "api/v1"

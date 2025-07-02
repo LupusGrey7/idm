@@ -12,6 +12,7 @@ import (
 	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
+	"idm/inner/web/middleware"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -47,6 +48,7 @@ LOG_DEVELOP_MODE=true`
 
 	// 1. Инициализация
 	app := fiber.New()
+	middleware.RegisterMiddleware(app, logger) //middleware
 
 	server := &web.Server{
 		App:            app,
@@ -76,6 +78,7 @@ LOG_DEVELOP_MODE=true`
 	//  Тестовые случаи
 	t.Run("should return role by ID", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		expectedData := Response{
 			Id:         testID,
 			Name:       testName,
@@ -85,14 +88,14 @@ LOG_DEVELOP_MODE=true`
 		}
 
 		// 3. Настройка мока
-		mockService.On("FindById", testID).Return(expectedData, nil)
+		mockService.On("FindById", testID).Return(expectedData, nil).Once()
 
 		// 4. Выполнение запроса
 		req := httptest.NewRequest("GET", "/api/v1/roles/1", nil)
 
 		resp, err := app.Test(req)
+		require.NoError(t, err) // Здесь не должно быть ошибок на уровне HTTP
 
-		require.NoError(t, err)
 		defer func(Body io.ReadCloser) {
 			err := Body.Close()
 			if err != nil {
@@ -106,7 +109,11 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
 
-		// 6. Проверки
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку
@@ -130,11 +137,11 @@ LOG_DEVELOP_MODE=true`
 		assert.WithinDuration(t, now, actualResponse.UpdateAt, time.Second)
 
 		mockService.AssertExpectations(t)
-
 	})
 	// create
 	t.Run("should return created role", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		expectedData := Response{
 			Id:         testID,
 			Name:       testName,
@@ -157,9 +164,11 @@ LOG_DEVELOP_MODE=true`
 		// Отправляем тестовый запрос на веб сервер
 		resp, err := app.Test(req)
 
-		// Выполняем проверки полученных данных
+		// 6. Выполняем проверки полученных данных
 		a.Nil(err)
 		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		a.Equal(http.StatusCreated, resp.StatusCode)
 
 		bytesData, err := io.ReadAll(resp.Body)
@@ -207,6 +216,11 @@ LOG_DEVELOP_MODE=true`
 		defer closeBody(t, resp.Body)
 
 		// 4. Проверяем ответ
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		// Проверка тела ответа
@@ -223,6 +237,7 @@ LOG_DEVELOP_MODE=true`
 	//update by id
 	t.Run("should return role when update by ID", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+
 		ID := int64(1)
 		expectedData := Response{
 			Id:         testID,
@@ -274,7 +289,11 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
 
-		// 6. Проверки
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку
@@ -347,7 +366,11 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
 
-		// 6. Проверки
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку
@@ -501,7 +524,11 @@ LOG_DEVELOP_MODE=true`
 		body, _ := io.ReadAll(resp.Body)
 		t.Logf("Raw response: %s", string(body))
 
-		// 6. Проверки
+		// 6. Выполняем проверки полученных данных
+		a.Nil(err)
+		a.NotEmpty(resp)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		// Декодируем в структуру-обёртку

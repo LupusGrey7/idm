@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"idm/inner/common"
 	"idm/inner/config"
 	"idm/inner/domain"
 	"idm/inner/web"
+	"idm/inner/web/middleware"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -36,8 +38,11 @@ LOG_DEVELOP_MODE=true`
 	// Тестируем
 	cfg := config.GetConfig(envFile)
 	var logger = common.NewLogger(cfg) // Создаем логгер
+
 	app := fiber.New()
+	middleware.RegisterMiddleware(app, logger) // middleware func
 	mockService := new(MockEmployeeService)
+
 	ctrl := NewController(
 		&web.Server{
 			App:            app,
@@ -68,6 +73,12 @@ LOG_DEVELOP_MODE=true`
 			t.Fatal(err)
 		}
 
+		//3. Проверки
+		require.NoError(t, err)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
+		require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
 		var result struct {
 			Success bool       `json:"success"`
 			Error   string     `json:"error"`
@@ -92,6 +103,12 @@ LOG_DEVELOP_MODE=true`
 			t.Fatal(err)
 		}
 
+		//3. Проверки
+		require.NoError(t, err)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
+		require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
 		var result struct {
 			Success bool       `json:"success"`
 			Error   string     `json:"error"`
@@ -106,7 +123,7 @@ LOG_DEVELOP_MODE=true`
 		}
 	})
 
-	// 3. Ошибка поиска (ИСПРАВЛЕН ТЕКСТ ОШИБКИ)
+	// 3. Ошибка поиска
 	t.Run("FindAllFailed", func(t *testing.T) {
 		mockService.On("FindAll").Return([]Response{}, domain.ErrFindAllFailed).Once()
 
@@ -116,6 +133,13 @@ LOG_DEVELOP_MODE=true`
 			t.Fatal(err)
 		}
 
+		//3. Проверки
+		require.NoError(t, err)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
+		require.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+		//4. Проверка тела ответа
 		var result struct {
 			Success bool        `json:"success"`
 			Error   string      `json:"error"`
@@ -141,6 +165,13 @@ LOG_DEVELOP_MODE=true`
 			t.Fatal(err)
 		}
 
+		//3. Проверки
+		require.NoError(t, err)
+		requestId := resp.Header.Get("X-Request-Id")
+		assert.NotEmpty(t, requestId, "expected non-empty request ID")
+		require.Equal(t, fiber.StatusInternalServerError, resp.StatusCode)
+
+		//4. Проверка тела ответа
 		var result struct {
 			Success bool        `json:"success"`
 			Error   string      `json:"error"`
