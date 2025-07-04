@@ -18,6 +18,11 @@ type MockRepo struct {
 	mock.Mock
 }
 
+func (m *MockRepo) GetPageByValues(ctx context.Context, values []int64) ([]Entity, int64, error) {
+	args := m.Called(ctx, values)
+	return args.Get(0).([]Entity), args.Get(1).(int64), args.Error(2)
+}
+
 // Mock реализация методов репо
 func (m *MockRepo) BeginTransaction() (*sqlx.Tx, error) {
 	args := m.Called()

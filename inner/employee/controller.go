@@ -3,6 +3,7 @@ package employee
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gofiber/fiber/v2" // Версия 2 - позволяет выводить ошибку
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
@@ -15,13 +16,15 @@ import (
 )
 
 const (
-	invalidRequestFormat = "Invalid request format"
-	validationFailed     = "validate name error"
-	internalServerError  = "Internal server error"
-	invalidIDFormat      = "Invalid ID format"
-	invalidRequestBody   = "Invalid request body"
+	invalidRequestFormat    = "Invalid request format"
+	validationFailed        = "validate name error"
+	internalServerError     = "Internal server error"
+	invalidIDFormat         = "Invalid ID format"
+	invalidRequestBody      = "Invalid request body"
+	invalidPageValuesFormat = "Invalid Page Values format"
 )
 
+// Controller (transport layer):
 type Controller struct {
 	server          *web.Server
 	employeeService Svc
@@ -33,6 +36,7 @@ type Svc interface {
 	FindAll(ctx context.Context) ([]Response, error)
 	FindById(ctx context.Context, id int64) (Response, error)
 	FindAllByIds(ctx context.Context, ids []int64) ([]Response, error)
+	GetAllByPage(ctx context.Context, req PageRequest) (PageResponse, error) // page int64, limit int64
 	CreateEmployee(ctx context.Context, request CreateRequest) (Response, error)
 	CreateEmployeeTx(ctx context.Context, request CreateRequest) (int64, error)
 	UpdateEmployee(ctx context.Context, id int64, request UpdateRequest) (Response, error)
@@ -60,11 +64,12 @@ func (c *Controller) RegisterRoutes() {
 	// полный маршрут получится "/transport/v1/employees"
 	c.server.GroupEmployees.Get("/", c.FindAll)
 	c.server.GroupEmployees.Get("/ids", c.FindAllByIds)
-	c.server.GroupEmployees.Get("/:id", c.FindById)
+	c.server.GroupEmployees.Get("/page", c.GetAllPages)
+	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
 	c.server.GroupEmployees.Post("/", c.CreateEmployee)
 	c.server.GroupEmployees.Post("/employee", c.CreateEmployeeTx)
+	c.server.GroupEmployees.Get("/:id", c.FindById)
 	c.server.GroupEmployees.Put("/:id", c.Update)
-	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
 	c.server.GroupEmployees.Delete("/:id", c.DeleteById)
 }
 
@@ -129,7 +134,7 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	employeeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		c.logger.Error(
-			"When the body parse an CreateEmployee ended with an error:",
+			"When the body parse an UpdateEmployee ended with an error:",
 			zap.Error(err),
 			zap.String("path", pathUrl),
 			zap.String("request_id", requestId),
@@ -160,6 +165,78 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 		"createAt": response.CreateAt,
 		"updateAt": response.UpdateAt,
 	})
+}
+
+// GetAllPages FIXME - add default value + response
+func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
+	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
+	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+
+	var pageValues []int64
+	pageValues, err := c.parsePageValues(ctx, requestId)
+	if err != nil {
+		c.logger.Error(
+			"When the parse an page request values for Employees param ended with an error:",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
+
+		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidPageValuesFormat+strconv.FormatInt(pageValues[0], 10)+" and "+strconv.FormatInt(pageValues[1], 10))
+	}
+
+	req := PageRequest{PageNumber: pageValues[0], PageSize: pageValues[1]}
+	response, err := c.employeeService.GetAllByPage(appContext, req) //fixme подумать как заменить если не указали на принудительное значение, pageValues[0] = pageNumber, pageValues[1] = pageSize
+	if err != nil {
+		c.logger.Error(
+			"When the get All Employees by Page ended with an error: %s",
+			zap.Error(err),
+			zap.String("request_id", requestId),
+		)
+
+		switch {
+		case errors.As(err, &domain.RequestValidationError{}), errors.As(err, &domain.AlreadyExistsError{}):
+			return http.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+		default:
+			return http.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+		}
+	}
+
+	return http.OkPageResponse(ctx, response)
+}
+
+func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64, error) {
+	pageNumber := ctx.Query("pageNumber", "1")
+	if pageNumber == "" {
+		c.logger.Error(
+			"When the parse an GatAllPages By pageNumber request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
+		return nil, fmt.Errorf("missing pageNumber parameter")
+	}
+
+	pageSize := ctx.Query("pageSize", "10")
+	if pageSize == "" {
+		c.logger.Error(
+			"When the parse an GatAllPages By pageSize request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
+		return nil, fmt.Errorf("missing pageSize parameter")
+	}
+	var pageList = []string{pageNumber, pageSize} // Declares and initializes with values {10, 2}
+
+	var pageValues []int64
+
+	for _, idStr := range pageList {
+		value, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid page values format")
+		}
+		pageValues = append(pageValues, value)
+	}
+
+	return pageValues, nil
 }
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {

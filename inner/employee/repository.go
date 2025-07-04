@@ -2,11 +2,13 @@ package employee
 
 import (
 	"context"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log"
 	"time"
 )
 
+// Repository - infra layer
 type Repository struct {
 	db *sqlx.DB
 }
@@ -30,8 +32,34 @@ func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, 
 	return employees, err
 }
 
+func (r *Repository) GetPageByValues(
+	ctx context.Context,
+	pageValues []int64,
+) ([]Entity, int64, error) {
+	var employees []Entity
+	// Запрос данных
+	dataQuery := `SELECT id, name, created_at, updated_at FROM employees LIMIT $1 OFFSET $2`
+	err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
+
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get employees: %w", err)
+	}
+
+	// Запрос общего количества (GetContext для скалярных значений!)
+	var total int64
+	countQuery := `SELECT COUNT(*) FROM employees`
+	if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %w", err)
+	}
+
+	return employees, total, nil
+}
+
 // FindAllEmployeesByIds - найти слайс элементов коллекции по слайсу их id
-func (r *Repository) FindAllEmployeesByIds(ctx context.Context, ids []int64) (employees []Entity, err error) {
+func (r *Repository) FindAllEmployeesByIds(
+	ctx context.Context,
+	ids []int64,
+) (employees []Entity, err error) {
 	query, args, err := sqlx.In("SELECT * FROM employees WHERE id IN (?)", ids)
 
 	if err != nil {

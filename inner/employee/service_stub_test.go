@@ -17,6 +17,11 @@ type StubEmployeeRepository struct {
 	err      error
 }
 
+func (s *StubEmployeeRepository) GetPageByValues(ctx context.Context, values []int64) ([]Entity, int64, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *StubEmployeeRepository) CreateEntityTx(ctx context.Context, tx *sqlx.Tx, entity *Entity) (int64, error) {
 	//TODO implement me
 	panic("implement me")

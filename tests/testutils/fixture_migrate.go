@@ -18,7 +18,7 @@ func LoadTestConfig() {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 
-	// Поднимаемся на 2 уровня вверх (из testutils в tests)
+	// Поднимаемся на 1-н уровень вверх (из testutils в tests)
 	baseDir := filepath.Join(dir, "../..")
 
 	// Формируем путь к .env.test
