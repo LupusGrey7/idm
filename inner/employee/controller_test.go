@@ -632,7 +632,8 @@ LOG_DEVELOP_MODE=true`
 			} `json:"data"`
 		}
 		var apiResp ApiResponse
-		err = json.Unmarshal(body, &apiResp)
+		errApi := json.Unmarshal(body, &apiResp)
+		require.NoError(t, errApi)
 
 		// 8. Verify
 		require.Equal(t, fiber.StatusOK, resp.StatusCode)
@@ -649,8 +650,111 @@ LOG_DEVELOP_MODE=true`
 		mockService.AssertExpectations(t)
 	})
 	//get by page error
-	t.Run("should return error when get employee by page", func(t *testing.T) {
+	t.Run("negative page number", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
 
+		// 1. Запрос с невалидными параметрами
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=-1&pageSize=3", nil)
+
+		// 2. Настройка мока (если ожидаем вызов)
+		mockService.On("GetAllByPage", mock.Anything, mock.Anything).
+			Return(PageResponse{}, nil).
+			Maybe() // .Maybe() предотвратит панику если вызова не будет
+
+		// 3. Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// 4. Проверка что сервис НЕ вызывался
+		mockService.AssertNotCalled(t, "GetAllByPage")
+
+		// 5. Проверка статуса
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+	//get by page error
+	t.Run("PageSize exceeds maximum", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
+
+		// Настройка мока
+		request := PageRequest{
+			PageNumber: 1,
+			PageSize:   103,
+		}
+		expectError := domain.RequestValidationError{Message: "Field PageSize must not exceed 100"}
+		mockService.On("GetAllByPage", appContext, request).Return(PageResponse{}, expectError).Once()
+
+		// Запрос с невалидным PageSize
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=103", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "expected status 400")
+
+		// Проверка тела ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "expected no error reading response body")
+		t.Logf("Raw response body: %s", body)
+
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		err = json.Unmarshal(body, &errResp)
+		require.NoError(t, err, "expected no error decoding JSON response, got body: %s", body)
+		assert.Equal(t, "Field PageSize must not exceed 100", errResp.Error, "expected error message")
+
+		// Проверка, что сервис вызывался
+		mockService.AssertCalled(t, "GetAllByPage", appContext, request)
+	})
+	t.Run("Negative page number", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
+
+		// Запрос с отрицательным PageNumber
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=-1&pageSize=10", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "expected status 400")
+
+		// Проверка тела ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "expected no error reading response body")
+		t.Logf("Raw response body: %s", body)
+
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		err = json.Unmarshal(body, &errResp)
+		require.NoError(t, err, "expected no error decoding JSON response, got body: %s", body)
+		assert.Equal(t, "Invalid Page Values format", errResp.Error, "expected error message")
+
+		// Проверка, что сервис вызывался
+		mockService.AssertNotCalled(t, "GetAllByPage", appContext, nil)
 	})
 	//delete by id
 	t.Run("should return success when delete by Id", func(t *testing.T) {
@@ -916,6 +1020,7 @@ LOG_DEVELOP_MODE=true`
 		assert.Equal(t, expectedError.Error(), response.Error)
 	})
 }
+
 func closeBody(t *testing.T, body io.ReadCloser) {
 	if err := body.Close(); err != nil {
 		t.Errorf("Error closing response body: %v", err)

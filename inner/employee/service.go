@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"idm/inner/domain"
+	"log"
 )
 
 type Service struct {
@@ -77,6 +78,8 @@ func (svc *Service) GetAllByPage(
 	ctx context.Context,
 	req PageRequest,
 ) (PageResponse, error) { // page int64, limit int64
+	log.Printf("--> req.PageNumber: %d, req.PageSize: %d", req.PageNumber, req.PageSize)
+
 	var err = svc.validator.Validate(req) // Валидируем запрос
 	if err != nil {
 		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
@@ -84,16 +87,25 @@ func (svc *Service) GetAllByPage(
 	}
 
 	// Вычисление offset
-	offset := (req.PageNumber - 1) * req.PageSize
+	offset := (req.PageNumber - 1) * req.PageSize //число записей, которое нужно пропустить (offset)
+	var limit = req.PageSize                      //число запией, которе нужно вернуть по запросу (limit).
 	//repo
-	entities, total, err := svc.repo.GetPageByValues(ctx, []int64{req.PageSize, offset})
+	entities, total, err := svc.repo.GetPageByValues(ctx, []int64{limit, offset})
 	if err != nil {
 		return PageResponse{}, fmt.Errorf("error featching Employees by Page values %w", err)
 	}
+	log.Printf("req.PageNumber: %d, req.PageSize: %d,  total: %d", req.PageNumber, req.PageSize, total)
 	//convert to result
 	var responses PageResponse
 	if len(entities) > 0 {
-		responses = entities[0].ToPageResponses(entities, []int64{req.PageSize, req.PageNumber}, total)
+		responses = entities[0].ToPageResponses(entities, []int64{req.PageNumber, req.PageSize}, total)
+	} else {
+		responses = PageResponse{
+			Result:     []Response{},
+			PageNumber: req.PageNumber,
+			PageSize:   int64(0),
+			Total:      total,
+		}
 	}
 
 	return responses, nil

@@ -13,10 +13,6 @@ type PageResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"error"`
 	Data    interface{} `json:"data"`
-	//Result     []Response `json:"result"` //fixme
-	//PageSize   int64      `json:"page_size" `
-	//PageNumber int64      `json:"page_number"`
-	//Total      int64      `json:"total"`
 }
 
 func ErrResponse(
@@ -44,19 +40,14 @@ func OkResponse(
 func OkPageResponse(
 	c *fiber.Ctx,
 	data interface{},
-	// page PageResponse,
 ) error {
 	return c.Status(fiber.StatusOK).JSON(&PageResponse{
 		Success: true,
 		Data:    data,
-		//Result:     page.Result,
-		//PageSize:   page.PageSize,
-		//PageNumber: page.PageNumber,
-		//Total:      page.Total,
 	})
 }
 
-// Дополнительная функция для 201 Created
+// CreatedResponse - Дополнительная функция для 201 Created
 func CreatedResponse(
 	c *fiber.Ctx,
 	data interface{},

@@ -96,8 +96,8 @@ type FindByIDRequest struct {
 }
 
 type PageRequest struct {
-	PageSize   int64 `validate:"required,min=1,max=100"`
-	PageNumber int64 `validate:"min=0"`
+	PageSize   int64 `validate:"required,min=1,max=155"` //gt=0,lte=100
+	PageNumber int64 `validate:"required,gt=0"`
 }
 
 type DeleteByIdsRequest struct {

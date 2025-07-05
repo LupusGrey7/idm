@@ -32,6 +32,8 @@ func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, 
 	return employees, err
 }
 
+// LIMIT number_of_rows: Определяет максимальное количество строк, которое будет возвращено запросом.
+// OFFSET starting_row: Указывает, сколько строк нужно пропустить в начале набора результатов, прежде чем начать выборку. Счет начинается с 0 (первая строка).
 func (r *Repository) GetPageByValues(
 	ctx context.Context,
 	pageValues []int64,
@@ -42,7 +44,7 @@ func (r *Repository) GetPageByValues(
 	err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get employees: %w", err)
+		return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
 	}
 
 	// Запрос общего количества (GetContext для скалярных значений!)
