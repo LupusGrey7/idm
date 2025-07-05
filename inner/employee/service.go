@@ -15,7 +15,7 @@ type Service struct {
 
 type Repo interface {
 	BeginTransaction() (tx *sqlx.Tx, err error)
-	GetPageByValues(ctx context.Context, values []int64) ([]Entity, int64, error)
+	GetPageByValues(ctx context.Context, values []int64, textFilter string) ([]Entity, int64, error)
 	FindById(ctx context.Context, id int64) (Entity, error)
 	FindAllEmployees(ctx context.Context) ([]Entity, error)
 	FindAllEmployeesByIds(ctx context.Context, ids []int64) ([]Entity, error)
@@ -73,11 +73,10 @@ func (svc *Service) FindAllByIds(ctx context.Context, ids []int64) ([]Response, 
 	return responses, err
 }
 
-// GetAllByPage - TODO
 func (svc *Service) GetAllByPage(
 	ctx context.Context,
 	req PageRequest,
-) (PageResponse, error) { // page int64, limit int64
+) (PageResponse, error) {
 	log.Printf("--> req.PageNumber: %d, req.PageSize: %d", req.PageNumber, req.PageSize)
 
 	var err = svc.validator.Validate(req) // Валидируем запрос
@@ -88,13 +87,15 @@ func (svc *Service) GetAllByPage(
 
 	// Вычисление offset
 	offset := (req.PageNumber - 1) * req.PageSize //число записей, которое нужно пропустить (offset)
-	var limit = req.PageSize                      //число запией, которе нужно вернуть по запросу (limit).
-	//repo
-	entities, total, err := svc.repo.GetPageByValues(ctx, []int64{limit, offset})
+	var limit = req.PageSize                      //Число записей, которе нужно вернуть по запросу (limit).
+	var pageArr = []int64{limit, offset}
+
+	entities, total, err := svc.repo.GetPageByValues(ctx, pageArr, req.TextFilter)
 	if err != nil {
 		return PageResponse{}, fmt.Errorf("error featching Employees by Page values %w", err)
 	}
 	log.Printf("req.PageNumber: %d, req.PageSize: %d,  total: %d", req.PageNumber, req.PageSize, total)
+
 	//convert to result
 	var responses PageResponse
 	if len(entities) > 0 {
