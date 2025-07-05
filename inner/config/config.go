@@ -29,7 +29,7 @@ func GetConfig(envFile string) Config {
 	var err = godotenv.Load(envFile) // Тихая загрузка .env без логирования ошибок
 	if err != nil {
 		// если нет файла, то залогируем это и попробуем получить конфиг из переменных окружения
-		log.Error("Error loading .env file: %v\n", zap.Error(err))
+		log.Error("Error loading .env file: \n", zap.Error(err))
 		//  логируем ошибку "файл не найден"
 		if !os.IsNotExist(err) {
 			log.Error("Error loading .env file: %v", err)
