@@ -37,21 +37,42 @@ func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, 
 func (r *Repository) GetPageByValues(
 	ctx context.Context,
 	pageValues []int64,
+	textFilter string,
 ) ([]Entity, int64, error) {
 	var employees []Entity
-	// Запрос данных
-	dataQuery := `SELECT id, name, created_at, updated_at FROM employees LIMIT $1 OFFSET $2`
-	err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
-
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
-	}
-
-	// Запрос общего количества (GetContext для скалярных значений!)
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM employees`
-	if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
-		return nil, 0, fmt.Errorf("failed to get total count: %w", err)
+
+	//case - Не менее 3-и, не пробельных (" ", "\n", "\t" и т.п.) символов.  тогда запрос с ilike
+	switch len(textFilter) {
+	case 2:
+		// Запрос данных
+		dataQuery := `SELECT id, name, created_at, updated_at FROM employees LIMIT $1 OFFSET $2`
+		err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
+
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
+		}
+
+		// Запрос общего количества (GetContext для скалярных значений!)
+		countQuery := `SELECT COUNT(*) FROM employees`
+		if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
+			return nil, 0, fmt.Errorf("failed to get total count: %w", err)
+		}
+
+	default:
+		// Запрос данных
+		dataQuery := `SELECT id, name, created_at, updated_at FROM employees WHERE name ilike '%name%' LIMIT $1 OFFSET $2`
+		err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1], textFilter)
+
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
+		}
+
+		// Запрос общего количества (GetContext для скалярных значений!)
+		countQuery := `SELECT COUNT(*) FROM employees WHERE 1=1 AND name ilike '%name%'`
+		if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
+			return nil, 0, fmt.Errorf("failed to get total count: %w", err)
+		}
 	}
 
 	return employees, total, nil
