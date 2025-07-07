@@ -213,7 +213,7 @@ func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64, string, error) {
 	pageNumber := ctx.Query("pageNumber", "1")
 	pageSize := ctx.Query("pageSize", "10")
-	textFilter := ctx.Query("textFilter")
+	textFilter := ctx.Query("textFilter", "")
 
 	c.logger.Debug(
 		"GetAllPages request",
@@ -224,12 +224,12 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 		zap.String("pageSize ", pageSize),
 		zap.String("textFilter ", textFilter),
 	)
-	_, _, err := c.checkNotNullRequestParam(pageNumber, pageSize, textFilter, requestId)
+	_, _, err := c.checkNotNullRequestParam(pageNumber, pageSize, requestId)
 	if err != nil {
 		return nil, "", err
 	}
 
-	var pageList = []string{pageNumber, pageSize} // Declares and initializes with values {10, 2}
+	var pageList = []string{pageNumber, pageSize} // Declares and initializes with values, for example {10, 2}
 
 	var pageValues []int64
 
@@ -240,6 +240,10 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 		}
 		pageValues = append(pageValues, value)
 	}
+	// Двойная проверка (на случай если валидатор пропустит)
+	if pageValues[0] < 1 || pageValues[1] < 1 {
+		return nil, "", fmt.Errorf("invalid pagination parameters")
+	}
 
 	c.logger.Debug(
 		"GetAllPages request",
@@ -248,10 +252,6 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 		zap.Int64("pageNumber", pageValues[0]),
 		zap.Int64("pageSize", pageValues[1]),
 	)
-	// Двойная проверка (на случай если валидатор пропустит)
-	if pageValues[0] < 1 || pageValues[1] < 1 {
-		return nil, "", fmt.Errorf("invalid pagination parameters")
-	}
 
 	return pageValues, textFilter, nil
 }
@@ -259,7 +259,6 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 func (c *Controller) checkNotNullRequestParam(
 	pageNumber string,
 	pageSize string,
-	textFilter string,
 	requestId string,
 ) ([]int64, string, error) {
 	if pageNumber == "" {
@@ -280,14 +279,6 @@ func (c *Controller) checkNotNullRequestParam(
 		return nil, "", fmt.Errorf("missing pageSize parameter")
 	}
 
-	if textFilter == "" {
-		c.logger.Error(
-			"When the parse textFilter request param ended with an error:",
-			zap.Error(nil),
-			zap.String("request_id", requestId),
-		)
-		return nil, "", fmt.Errorf("missing textFilter parameter")
-	}
 	return nil, "", nil
 }
 

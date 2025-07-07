@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -32,8 +33,10 @@ func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, 
 	return employees, err
 }
 
+// GetPageByValues
 // LIMIT number_of_rows: Определяет максимальное количество строк, которое будет возвращено запросом.
-// OFFSET starting_row: Указывает, сколько строк нужно пропустить в начале набора результатов, прежде чем начать выборку. Счет начинается с 0 (первая строка).
+// OFFSET starting_row: Указывает, сколько строк нужно пропустить в начале набора результатов, прежде чем начать выборку.
+// TextFilter не менее, 3 не пробельных (" ", "\n", "\t" и т.п.) символов.
 func (r *Repository) GetPageByValues(
 	ctx context.Context,
 	pageValues []int64,
@@ -42,37 +45,46 @@ func (r *Repository) GetPageByValues(
 	var employees []Entity
 	var total int64
 
-	//case - Не менее 3-и, не пробельных (" ", "\n", "\t" и т.п.) символов.  тогда запрос с ilike
-	switch len(textFilter) {
-	case 2:
-		// Запрос данных
-		dataQuery := `SELECT id, name, created_at, updated_at FROM employees LIMIT $1 OFFSET $2`
-		err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
+	// Нормализуем фильтр (удаляем лишние пробелы)
+	filteredText := strings.TrimSpace(textFilter)
+	useFilter := len(filteredText) >= 3
+	searchPattern := "%" + filteredText + "%"
 
+	log.Printf(" ->> pageValuesEmployee: %v, textFilter: %v", pageValues, textFilter)
+
+	// Базовые запросы
+	baseQuery := "SELECT id, name, created_at, updated_at FROM employees"
+	countQuery := "SELECT COUNT(*) FROM employees"
+
+	// Добавляем фильтрацию если нужно
+	if useFilter {
+		baseQuery += " WHERE name ILIKE $1"
+		countQuery += " WHERE name ILIKE $1"
+	}
+
+	// Добавляем пагинацию
+	baseQuery += fmt.Sprintf(" LIMIT %d OFFSET %d", pageValues[0], pageValues[1])
+
+	// Выполняем запросы
+	var err error
+	if useFilter {
+		log.Printf("textFilter: baseQuery --> %s", baseQuery)
+
+		err = r.db.SelectContext(ctx, &employees, baseQuery, searchPattern)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
+			return nil, 0, fmt.Errorf("failed to get filtered employees: %w", err)
 		}
-
-		// Запрос общего количества (GetContext для скалярных значений!)
-		countQuery := `SELECT COUNT(*) FROM employees`
-		if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
-			return nil, 0, fmt.Errorf("failed to get total count: %w", err)
-		}
-
-	default:
-		// Запрос данных
-		dataQuery := `SELECT id, name, created_at, updated_at FROM employees WHERE name ilike '%name%' LIMIT $1 OFFSET $2`
-		err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1], textFilter)
-
+		err = r.db.GetContext(ctx, &total, countQuery, searchPattern)
+	} else {
+		err = r.db.SelectContext(ctx, &employees, baseQuery)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
+			return nil, 0, fmt.Errorf("failed to get employees: %w", err)
 		}
+		err = r.db.GetContext(ctx, &total, countQuery)
+	}
 
-		// Запрос общего количества (GetContext для скалярных значений!)
-		countQuery := `SELECT COUNT(*) FROM employees WHERE 1=1 AND name ilike '%name%'`
-		if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
-			return nil, 0, fmt.Errorf("failed to get total count: %w", err)
-		}
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %w", err)
 	}
 
 	return employees, total, nil

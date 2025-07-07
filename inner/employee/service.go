@@ -85,6 +85,10 @@ func (svc *Service) GetAllByPage(
 		return PageResponse{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
+	// Валидация TextFilter
+	if req.TextFilter != "" && len(req.TextFilter) < 3 {
+		return PageResponse{}, domain.RequestValidationError{Message: "TextFilter must be at least 3 characters"}
+	}
 	// Вычисление offset
 	offset := (req.PageNumber - 1) * req.PageSize //число записей, которое нужно пропустить (offset)
 	var limit = req.PageSize                      //Число записей, которе нужно вернуть по запросу (limit).

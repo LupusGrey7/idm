@@ -96,9 +96,9 @@ type FindByIDRequest struct {
 }
 
 type PageRequest struct {
-	PageSize   int64 `validate:"required,min=1,max=155"` //gt=0,lte=100
-	PageNumber int64 `validate:"required,gt=0"`
-	TextFilter string
+	PageSize   int64  `validate:"required,min=1,max=155"` //gt=0,lte=100
+	PageNumber int64  `validate:"required,min=1"`
+	TextFilter string `validate:"omitempty,min=0"` // omitempty go tag, empty fields // Необязательное поле
 }
 
 type DeleteByIdsRequest struct {
