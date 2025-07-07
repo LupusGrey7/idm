@@ -18,8 +18,8 @@ type MockRepo struct {
 	mock.Mock
 }
 
-func (m *MockRepo) GetPageByValues(ctx context.Context, values []int64) ([]Entity, int64, error) {
-	args := m.Called(ctx, values)
+func (m *MockRepo) GetPageByValues(ctx context.Context, values []int64, textFilter string) ([]Entity, int64, error) {
+	args := m.Called(ctx, values, textFilter)
 	return args.Get(0).([]Entity), args.Get(1).(int64), args.Error(2)
 }
 
@@ -213,7 +213,6 @@ func TestEmployeeService(t *testing.T) {
 		a.True(repo.AssertNumberOfCalls(t, "FindById", 1))
 		repo.AssertExpectations(t) // проверяем что были вызваны все объявленные ожидания
 	})
-
 	t.Run("when create Employee should return Response", func(t *testing.T) {
 		var repo = new(MockRepo)               // Создаём для теста новый экземпляр мока репозитория.
 		validator := new(MockValidator)        //  mocks validator
@@ -268,7 +267,7 @@ func TestEmployeeService(t *testing.T) {
 		repo.AssertNumberOfCalls(t, "UpdateEmployee", 1)
 	})
 	//--- Тест на ошибку валидации Name --//
-	t.Run("should return validation error", func(t *testing.T) {
+	t.Run("when update request have not valid name should return validation error", func(t *testing.T) {
 		var repo = new(MockRepo)               // Создаём для теста новый экземпляр мока репозитория.
 		validator := new(MockValidator)        //
 		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)
@@ -290,7 +289,7 @@ func TestEmployeeService(t *testing.T) {
 		repo.AssertNumberOfCalls(t, "UpdateEmployee", 0)
 	})
 	//--- Тест на ошибку валидации ID ---//
-	t.Run("should return validation error", func(t *testing.T) {
+	t.Run("when update request should return validation error", func(t *testing.T) {
 		var repo = new(MockRepo)               // Создаём для теста новый экземпляр мока репозитория.
 		validator := new(MockValidator)        //
 		service := NewService(repo, validator) // создаём новый экземпляр сервиса (чтобы передать ему новый мок репозитория)

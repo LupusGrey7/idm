@@ -77,7 +77,7 @@ func (svc *Service) GetAllByPage(
 	ctx context.Context,
 	req PageRequest,
 ) (PageResponse, error) {
-	log.Printf("--> req.PageNumber: %d, req.PageSize: %d", req.PageNumber, req.PageSize)
+	log.Printf("--> req.PageNumber: %d, req.PageSize: %d, req.TextFilter %s", req.PageNumber, req.PageSize, req.TextFilter)
 
 	var err = svc.validator.Validate(req) // Валидируем запрос
 	if err != nil {
@@ -85,6 +85,10 @@ func (svc *Service) GetAllByPage(
 		return PageResponse{}, domain.RequestValidationError{Message: err.Error()}
 	}
 
+	// Валидация TextFilter
+	if req.TextFilter != "" && len(req.TextFilter) < 3 {
+		return PageResponse{}, domain.RequestValidationError{Message: "TextFilter must be at least 3 characters"}
+	}
 	// Вычисление offset
 	offset := (req.PageNumber - 1) * req.PageSize //число записей, которое нужно пропустить (offset)
 	var limit = req.PageSize                      //Число записей, которе нужно вернуть по запросу (limit).

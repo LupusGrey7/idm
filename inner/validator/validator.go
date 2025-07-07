@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"idm/inner/domain"
+	"strings"
 )
 
 type Validator struct {
@@ -13,6 +14,22 @@ type Validator struct {
 
 func NewValidator() *Validator {
 	validate := validator.New()
+
+	// Регистрируем кастомный валидатор "no_sql_injection"
+	// (правильный вызов метода для *validator.Validate)
+	_ = validate.RegisterValidation(
+		"no_sql_injection",
+		func(fl validator.FieldLevel) bool {
+			value := fl.Field().String()
+			forbiddenChars := []string{";", "'", "\"", "--", "/*", "*/", "\\"}
+			for _, char := range forbiddenChars {
+				if strings.Contains(value, char) {
+					return false // Найден опасный символ
+				}
+			}
+			return true
+		},
+	)
 	return &Validator{validate: validate}
 }
 
@@ -30,6 +47,10 @@ func (v *Validator) Validate(request any) error {
 					return domain.RequestValidationError{Message: fmt.Sprintf("Field %s must be at least %s", e.Field(), e.Param())}
 				case "max":
 					return domain.RequestValidationError{Message: fmt.Sprintf("Field %s must not exceed %s", e.Field(), e.Param())}
+				case "no_sql_injection": // Обработка нового тега
+					return domain.RequestValidationError{Message: fmt.Sprintf("Field %s contains forbidden SQL characters", e.Field())}
+				default:
+					return domain.RequestValidationError{Message: fmt.Sprintf("Field %s is invalid", e.Field())} // Обработка других ошибок
 				}
 			}
 		}
