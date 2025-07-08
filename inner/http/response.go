@@ -4,17 +4,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Response model info
+// @Description Employee Controller response information
+// @Description with success, error, date
 type Response struct {
 	Success bool        `json:"success"`
 	Message string      `json:"error"`
 	Data    interface{} `json:"data"`
 }
+
+// PageResponse model info
+// @Description Employee Controller response information
+// @Description with success, error, date
 type PageResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"error"`
 	Data    interface{} `json:"data"`
 }
 
+// fixme -ParseComment error in file /Users/kenobi/Projects/Home/Go/idm/inner/employee/controller.go :cannot find type definition: http.ErrResponse
+// ErrResponse model info
+// @Description ErrResponse Controller response information
+// @Description with Response
 func ErrResponse(
 	c *fiber.Ctx,
 	code int,

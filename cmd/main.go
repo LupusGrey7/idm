@@ -21,11 +21,22 @@ import (
 	"idm/inner/web"
 )
 
+// @title 	 	  IDM API documentation
+// @version		  1.0
+// @description	  This is a sample server employee server
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+// @BasePath	  /api/v1/
 func main() {
 	//1. считывание конфигурации
 	cfg := config.GetConfig(".env")
 	var logger = common.NewLogger(cfg) // Создаем логгер
 	logger.Debug("-->> Start Go App : IDM Project ")
+
+	//FIXME
+	// Переопределяем версию приложения, которая будет отображаться в swagger UI.
+	// Пакет docs и структура SwaggerInfo в нём появятся поле генерации документации (см. далее).
+	docs.SwaggerInfo.Version = cfg.AppVersion
 
 	// 2. Создаём `Kонтекст` с отменой для управления ресурсами
 	ctx, cancel := context.WithCancel(context.Background())

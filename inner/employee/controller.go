@@ -67,14 +67,25 @@ func (c *Controller) RegisterRoutes() {
 	c.server.GroupEmployees.Get("/page", c.GetAllPages)
 	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
 	c.server.GroupEmployees.Post("/", c.CreateEmployee)
-	c.server.GroupEmployees.Post("/employee", c.CreateEmployeeTx)
+	c.server.GroupEmployees.Post("/tx", c.CreateEmployeeTx)
 	c.server.GroupEmployees.Get("/:id", c.FindById)
 	c.server.GroupEmployees.Put("/:id", c.Update)
 	c.server.GroupEmployees.Delete("/:id", c.DeleteById)
 }
 
-// -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/transport/v1/employees" --//
+// -- функции-хендлеры, которые будут вызываться при POST\GET... запросе по маршруту "/api/v1/employees" --//
 
+// CreateEmployee godoc
+// @Summary      create a new employee
+// @Description  Create a new employee
+// @Tags 		 employee
+// @Accept 		 json
+// @Produce 	 json
+// @Param 		 request body 	employee.CreateRequest true "Employee creation details"
+// @Success 	 200  {object}  employee.Response	"Employee response"
+// @Failure      400  {object}  http.ErrResponse	"Bad request"
+// @Failure      500  {object}  http.ErrResponse	"Bad request"
+// @Router 		 /employees/ 	[post]
 func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -124,6 +135,17 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	return http.CreatedResponse(ctx, newEmployee)
 }
 
+// FindById 	 godoc
+// @Description  Find by ID employee
+// @Summary 	 find by ID employee
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param 		 id   path      	int  true  "Employee ID"
+// @Success 	 200  {object}  	employee.Response	"Employee response"
+// @Failure      400  {object}  	http.ErrResponse	"Bad request"
+// @Failure      500  {object}  	http.ErrResponse	"Bad request"
+// @Router 		 /employees/{id} 	[get]
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -167,6 +189,20 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	})
 }
 
+// GetAllPages   godoc
+// @Description  Find all Employees by page
+// @Summary		 get all employees by page
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param   	 pageNumber 		query     	string     			false  "string valid"       minlength(1)  maxlength(10)
+// @Param   	 pageSize 			query     	string     			false  "string valid"       minlength(1)  maxlength(155)
+// @Param   	 textFilter 		query     	string     			false  "string valid"       minlength(0)  maxlength(10)
+// @Success 	 200  				{object}  	employee.Response	"Employee request"
+// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
+// @Failure      404  				{object}  	http.ErrResponse	"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
+// @Router 		 /employees/page 	[get]
 func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
@@ -297,6 +333,16 @@ func (c *Controller) checkNotNullRequestParam(
 	return nil, "", nil
 }
 
+// FindAll   	 godoc
+// @Description  Find all Employees
+// @Summary		 get all employees
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Success 	 200  				{array}  	employee.Response	"Employee response"
+// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
+// @Router 		 /employees/ 		[get]
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -320,6 +366,17 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	return http.OkResponse(ctx, response)
 }
 
+// FindAllByIds  godoc
+// @Description  Find all Employees by IDs
+// @Summary		 get all employees by IDs
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param   	 ids 				query     	string     			true  "Employees ids string values"       minlength(1)
+// @Success 	 200  				{array}  	employee.Response	"Employee response"
+// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
+// @Router 		 /employees/ 		[get]
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -369,6 +426,18 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	return http.OkResponse(ctx, response)
 }
 
+// Update   	 godoc
+// @Summary		 update employee by IDs
+// @Description  Update Employee by IDs
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param        id   				path      	int  					true  "Employee ID" minlength(1)
+// @Param   	 request 			body     	employee.UpdateRequest	true  "Employee updated details"
+// @Success 	 200  				{object}  	employee.Response		"Employee response"
+// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
+// @Router 		 /employees/{id} 	[post]
 func (c *Controller) Update(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -416,6 +485,17 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 	return http.OkResponse(ctx, updatedEmployee)
 }
 
+// DeleteById  godoc
+// @Description  Delete Employee by ID
+// @Summary		 delete employee by ID
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param        id   				path      	int  					true  "Employee ID" minlength(1)
+// @Success 	 200  				{object}  	employee.Response		"Employee response"
+// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
+// @Router 		 /employees/{id} 	[delete]
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -452,6 +532,17 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	return http.OkResponse(ctx, response)
 }
 
+// DeleteByIds  godoc
+// @Description  Find all Employees by IDs
+// @Summary		 get all employees by IDs
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param   	 ids 				query     	string     			true  "Employees ids string values"       minlength(1)
+// @Success 	 200  				{array}  	employee.Response	"Employee array"
+// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
+// @Router 		 /employees/ 		[delete]
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -504,6 +595,17 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	return http.OkResponse(ctx, response)
 }
 
+// CreateEmployeeTx  godoc
+// @Description  Create Employee by Transactional
+// @Summary		 create employee by transactional
+// @Tags 		 employee
+// @Accept  	 json
+// @Produce 	 json
+// @Param   	 request			body    	employee.CreateRequest	true  "Employee creation details"       minlength(1)
+// @Success 	 200  				{array}  	employee.Response		"Bad request"
+// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
+// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
+// @Router 		 /employees/tx		[get]
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func

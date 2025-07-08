@@ -11,6 +11,9 @@ type Entity struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
+// Response model info
+// @Description Employee account information
+// @Description with employee id, name, createAt, updateAt
 type Response struct {
 	Id       int64     `json:"id"`
 	Name     string    `json:"name"`
@@ -18,6 +21,9 @@ type Response struct {
 	UpdateAt time.Time `json:"updateAt"`
 }
 
+// PageResponse model info
+// @Description Employee account information
+// @Description with employee result, page_size, page_number, total
 type PageResponse struct {
 	Result     []Response `json:"result"`
 	PageSize   int64      `json:"page_size" `
@@ -59,6 +65,9 @@ func (e *Entity) ToResponseList(entities []*Entity) []Response {
 	return responses
 }
 
+// CreateRequest model info
+// @Description Employee account information
+// @Description with name
 type CreateRequest struct {
 	Name string `json:"name" validate:"required,min=2,max=155"`
 }
@@ -67,6 +76,9 @@ func (req *CreateRequest) ToEntity() *Entity {
 	return &Entity{Name: req.Name}
 }
 
+// UpdateRequest model info
+// @Description Employee account information
+// @Description with employee id, name, createAt, updateAt
 type UpdateRequest struct {
 	Id        int64     `json:"id" validate:"required,min=1"`
 	Name      string    `json:"name" validate:"required,min=2,max=155"`
