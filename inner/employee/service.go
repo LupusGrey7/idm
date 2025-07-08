@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"idm/inner/domain"
+	"log"
 )
 
 type Service struct {
@@ -14,6 +15,7 @@ type Service struct {
 
 type Repo interface {
 	BeginTransaction() (tx *sqlx.Tx, err error)
+	GetPageByValues(ctx context.Context, values []int64) ([]Entity, int64, error)
 	FindById(ctx context.Context, id int64) (Entity, error)
 	FindAllEmployees(ctx context.Context) ([]Entity, error)
 	FindAllEmployeesByIds(ctx context.Context, ids []int64) ([]Entity, error)
@@ -71,6 +73,44 @@ func (svc *Service) FindAllByIds(ctx context.Context, ids []int64) ([]Response, 
 	return responses, err
 }
 
+// GetAllByPage - TODO
+func (svc *Service) GetAllByPage(
+	ctx context.Context,
+	req PageRequest,
+) (PageResponse, error) { // page int64, limit int64
+	log.Printf("--> req.PageNumber: %d, req.PageSize: %d", req.PageNumber, req.PageSize)
+
+	var err = svc.validator.Validate(req) // Валидируем запрос
+	if err != nil {
+		// возвращаем кастомную ошибку в случае, если запрос не прошёл валидацию
+		return PageResponse{}, domain.RequestValidationError{Message: err.Error()}
+	}
+
+	// Вычисление offset
+	offset := (req.PageNumber - 1) * req.PageSize //число записей, которое нужно пропустить (offset)
+	var limit = req.PageSize                      //число запией, которе нужно вернуть по запросу (limit).
+	//repo
+	entities, total, err := svc.repo.GetPageByValues(ctx, []int64{limit, offset})
+	if err != nil {
+		return PageResponse{}, fmt.Errorf("error featching Employees by Page values %w", err)
+	}
+	log.Printf("req.PageNumber: %d, req.PageSize: %d,  total: %d", req.PageNumber, req.PageSize, total)
+	//convert to result
+	var responses PageResponse
+	if len(entities) > 0 {
+		responses = entities[0].ToPageResponses(entities, []int64{req.PageNumber, req.PageSize}, total)
+	} else {
+		responses = PageResponse{
+			Result:     []Response{},
+			PageNumber: req.PageNumber,
+			PageSize:   int64(0),
+			Total:      total,
+		}
+	}
+
+	return responses, nil
+}
+
 func (svc *Service) FindById(
 	ctx context.Context,
 	id int64,
@@ -92,7 +132,10 @@ func (svc *Service) FindById(
 	return entity.ToResponse(), nil
 }
 
-func (svc *Service) CreateEmployee(ctx context.Context, createRequest CreateRequest) (Response, error) {
+func (svc *Service) CreateEmployee(
+	ctx context.Context,
+	createRequest CreateRequest,
+) (Response, error) {
 	// Создаем DTO для валидации
 	if err := svc.validator.Validate(createRequest); err != nil { // Валидируем запрос
 		return Response{}, domain.RequestValidationError{Message: err.Error()}

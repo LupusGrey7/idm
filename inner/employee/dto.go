@@ -18,6 +18,13 @@ type Response struct {
 	UpdateAt time.Time `json:"updateAt"`
 }
 
+type PageResponse struct {
+	Result     []Response `json:"result"`
+	PageSize   int64      `json:"page_size" `
+	PageNumber int64      `json:"page_number"`
+	Total      int64      `json:"total"`
+}
+
 func (e *Entity) ToResponse() Response {
 	return Response{
 		Id:       e.Id,
@@ -25,6 +32,31 @@ func (e *Entity) ToResponse() Response {
 		CreateAt: e.CreatedAt,
 		UpdateAt: e.UpdatedAt,
 	}
+}
+func (e *Entity) ToPageResponses(
+	entities []Entity,
+	pageValues []int64,
+	total int64,
+) PageResponse {
+	var response []Response
+	for _, entity := range entities {
+		response = append(response, entity.ToResponse())
+	}
+
+	return PageResponse{
+		Result:     response,
+		PageNumber: pageValues[0],
+		PageSize:   pageValues[1],
+		Total:      total,
+	}
+}
+
+func (e *Entity) ToResponseList(entities []*Entity) []Response {
+	var responses []Response
+	for _, entity := range entities {
+		responses = append(responses, entity.ToResponse())
+	}
+	return responses
 }
 
 type CreateRequest struct {
@@ -61,6 +93,11 @@ type FindAllByIdsRequest struct {
 
 type FindByIDRequest struct {
 	ID int64 `validate:"required,min=1"`
+}
+
+type PageRequest struct {
+	PageSize   int64 `validate:"required,min=1,max=155"` //gt=0,lte=100
+	PageNumber int64 `validate:"required,gt=0"`
 }
 
 type DeleteByIdsRequest struct {

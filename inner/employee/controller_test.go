@@ -66,12 +66,13 @@ LOG_DEVELOP_MODE=true`
 
 	server.GroupEmployees.Get("/", ctrl.FindAll)
 	server.GroupEmployees.Get("/ids", ctrl.FindAllByIds)
-	server.GroupEmployees.Get("/:id", ctrl.FindById)
-	server.GroupEmployees.Post("/", ctrl.CreateEmployee)
+	server.GroupEmployees.Get("/page", ctrl.GetAllPages) // Статический путь
 	server.GroupEmployees.Post("/employee", ctrl.CreateEmployeeTx)
-	server.GroupEmployees.Put("/:id", ctrl.Update)
 	server.GroupEmployees.Delete("/ids", ctrl.DeleteByIds) // Сначала специфичный маршрут
-	server.GroupEmployees.Delete("/:id", ctrl.DeleteById)  // Потом общий
+	server.GroupEmployees.Get("/:id", ctrl.FindById)       // Динамический параметр
+	server.GroupEmployees.Post("/", ctrl.CreateEmployee)
+	server.GroupEmployees.Put("/:id", ctrl.Update)
+	server.GroupEmployees.Delete("/:id", ctrl.DeleteById) // Потом общий
 
 	testID := int64(1)
 	testName := "John Sena"
@@ -572,6 +573,189 @@ LOG_DEVELOP_MODE=true`
 		assert.True(t, response.Success)
 		assert.Empty(t, response.Data)
 	})
+	//get by page success
+	t.Run("should return employees when found by page", func(t *testing.T) {
+		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
+		// 1. Подготовка данных
+
+		// 2. Настройка мока
+		pageNumber := "1"
+		pageSize := "3"
+		request := PageRequest{
+			PageNumber: 1,
+			PageSize:   3,
+		}
+
+		// Prepare expected service response
+		expectedServiceResponse := PageResponse{
+			Result: []Response{
+				{Id: 1, Name: "John Sena"},
+				{Id: 2, Name: "John Sena"},
+				{Id: 3, Name: "John Sena"},
+			},
+			PageSize:   3,
+			PageNumber: 1,
+			Total:      5,
+		}
+
+		//  Настройка мока - service
+		mockService.On("GetAllByPage", appContext, request).Return(expectedServiceResponse, nil).Once()
+
+		// 3. Создание запроса
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber="+pageNumber+"&pageSize="+pageSize, nil)
+
+		// 4. Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+		// 5. Проверка сырого ответа -Читаем тело ОДИН РАЗ
+		body, _ := io.ReadAll(resp.Body)
+		t.Logf("Raw response: %s", string(body))
+
+		// 6. Проверки
+		require.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+		// 7. Define correct response structure
+		type ApiResponse struct {
+			Success bool   `json:"success"`
+			Message string `json:"error"`
+			Data    struct {
+				Result     []Response `json:"result"`
+				PageSize   int64      `json:"page_size"`
+				PageNumber int64      `json:"page_number"`
+				Total      int64      `json:"total"`
+			} `json:"data"`
+		}
+		var apiResp ApiResponse
+		errApi := json.Unmarshal(body, &apiResp)
+		require.NoError(t, errApi)
+
+		// 8. Verify
+		require.Equal(t, fiber.StatusOK, resp.StatusCode)
+		assert.True(t, apiResp.Success)
+		assert.Empty(t, apiResp.Message)
+
+		// Проверяем данные внутри data
+		assert.Len(t, apiResp.Data.Result, 3)
+		assert.Equal(t, int64(1), apiResp.Data.PageNumber)
+		assert.Equal(t, int64(3), apiResp.Data.PageSize)
+		assert.Equal(t, int64(5), apiResp.Data.Total)
+
+		//verify service calls
+		mockService.AssertExpectations(t)
+	})
+	//get by page error
+	t.Run("negative page number", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
+
+		// 1. Запрос с невалидными параметрами
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=-1&pageSize=3", nil)
+
+		// 2. Настройка мока (если ожидаем вызов)
+		mockService.On("GetAllByPage", mock.Anything, mock.Anything).
+			Return(PageResponse{}, nil).
+			Maybe() // .Maybe() предотвратит панику если вызова не будет
+
+		// 3. Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// 4. Проверка что сервис НЕ вызывался
+		mockService.AssertNotCalled(t, "GetAllByPage")
+
+		// 5. Проверка статуса
+		require.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
+	//get by page error
+	t.Run("PageSize exceeds maximum", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
+
+		// Настройка мока
+		request := PageRequest{
+			PageNumber: 1,
+			PageSize:   103,
+		}
+		expectError := domain.RequestValidationError{Message: "Field PageSize must not exceed 100"}
+		mockService.On("GetAllByPage", appContext, request).Return(PageResponse{}, expectError).Once()
+
+		// Запрос с невалидным PageSize
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=103", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "expected status 400")
+
+		// Проверка тела ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "expected no error reading response body")
+		t.Logf("Raw response body: %s", body)
+
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		err = json.Unmarshal(body, &errResp)
+		require.NoError(t, err, "expected no error decoding JSON response, got body: %s", body)
+		assert.Equal(t, "Field PageSize must not exceed 100", errResp.Error, "expected error message")
+
+		// Проверка, что сервис вызывался
+		mockService.AssertCalled(t, "GetAllByPage", appContext, request)
+	})
+	t.Run("Negative page number", func(t *testing.T) {
+		mockService.ExpectedCalls = nil
+
+		// Запрос с отрицательным PageNumber
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=-1&pageSize=10", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err)
+		defer func() { //Явная проверка ошибки (рекомендуется)
+			err := resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close response body: %v", err)
+			}
+		}()
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "expected status 400")
+
+		// Проверка тела ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "expected no error reading response body")
+		t.Logf("Raw response body: %s", body)
+
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		err = json.Unmarshal(body, &errResp)
+		require.NoError(t, err, "expected no error decoding JSON response, got body: %s", body)
+		assert.Equal(t, "Invalid Page Values format", errResp.Error, "expected error message")
+
+		// Проверка, что сервис вызывался
+		mockService.AssertNotCalled(t, "GetAllByPage", appContext, nil)
+	})
 	//delete by id
 	t.Run("should return success when delete by Id", func(t *testing.T) {
 		mockService.ExpectedCalls = nil // Сбрасываем моки перед тестом
@@ -628,6 +812,9 @@ LOG_DEVELOP_MODE=true`
 
 		mockService.AssertExpectations(t)
 		mockService.AssertNumberOfCalls(t, "DeleteById", 1)
+
+		//verify service calls
+		mockService.AssertExpectations(t)
 
 	})
 	// delete by id error
@@ -715,7 +902,7 @@ LOG_DEVELOP_MODE=true`
 		// Перед app.Test(req)
 		routes := app.GetRoutes()
 		for _, route := range routes {
-			t.Logf("Route: %s %s", route.Method, route.Path)
+			t.Logf("Route: %s %s", route.Method, route.Path) //- Route: DELETE /api/v1/employees/ids
 		}
 
 		// 3. Выполнение запроса
@@ -833,6 +1020,7 @@ LOG_DEVELOP_MODE=true`
 		assert.Equal(t, expectedError.Error(), response.Error)
 	})
 }
+
 func closeBody(t *testing.T, body io.ReadCloser) {
 	if err := body.Close(); err != nil {
 		t.Errorf("Error closing response body: %v", err)

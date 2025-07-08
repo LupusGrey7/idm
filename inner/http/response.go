@@ -1,8 +1,15 @@
 package http
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
+)
 
 type Response struct {
+	Success bool        `json:"success"`
+	Message string      `json:"error"`
+	Data    interface{} `json:"data"`
+}
+type PageResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"error"`
 	Data    interface{} `json:"data"`
@@ -24,13 +31,23 @@ func OkResponse(
 	c *fiber.Ctx,
 	data interface{},
 ) error {
-	return c.JSON(&Response{
+	return c.Status(200).JSON(&Response{
 		Success: true,
 		Data:    data,
 	})
 }
 
-// Дополнительная функция для 201 Created
+func OkPageResponse(
+	c *fiber.Ctx,
+	data interface{},
+) error {
+	return c.Status(fiber.StatusOK).JSON(&PageResponse{
+		Success: true,
+		Data:    data,
+	})
+}
+
+// CreatedResponse - Дополнительная функция для 201 Created
 func CreatedResponse(
 	c *fiber.Ctx,
 	data interface{},

@@ -10,6 +10,11 @@ type MockEmployeeService struct {
 	mock.Mock
 }
 
+func (m *MockEmployeeService) GetAllByPage(ctx context.Context, req PageRequest) (PageResponse, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(PageResponse), args.Error(1) // Важно: правильный тип
+}
+
 func (m *MockEmployeeService) FindAll(ctx context.Context) ([]Response, error) {
 	args := m.Called(ctx)
 	return args.Get(0).([]Response), args.Error(1) // Важно: правильный тип
