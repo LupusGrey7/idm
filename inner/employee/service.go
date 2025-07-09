@@ -59,6 +59,7 @@ func (svc *Service) FindAllByIds(ctx context.Context, ids []int64) ([]Response, 
 		//return []Response{}, error2.RequestValidationError{Message: err.Error()}
 		return []Response{}, domain.RequestValidationError{Message: err.Error()}
 	}
+	log.Printf("ids: %v", ids)
 
 	entities, err := svc.repo.FindAllEmployeesByIds(ctx, ids)
 	if err != nil {

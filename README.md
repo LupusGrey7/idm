@@ -2,6 +2,9 @@
 
 [![Go Version](https://img.shields.io/badge/go-%3E%3D1.21-blue.svg)](https://golang.org/)
 [![License: Apache](https://img.shields.io/badge/License-Apache-yellow.svg)](https://opensource.org/licenses/Apache)
+![Profile Views](https://komarev.com/ghpvc/?username=LupusGrey7&color=blue&style=flat-square)
+![GitHub last commit](https://img.shields.io/github/last-commit/LupusGrey7/idm?logo=github)
+![GitHub Repo Views](https://img.shields.io/github/views/LupusGrey7/idm?style=social)
 
 ### Description
 Go Project Structure Learning

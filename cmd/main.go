@@ -16,6 +16,7 @@ import (
 	"idm/inner/config"
 	"idm/inner/database"
 
+	"idm/docs"
 	"idm/inner/employee"
 	"idm/inner/info"
 	"idm/inner/web"
@@ -23,9 +24,10 @@ import (
 
 // @title 	 	  IDM API documentation
 // @version		  1.0
-// @description	  This is a sample server employee server
+// @description	  This is an example of a simple employee app.
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+// @host      	   127.0.0.1:8080
 // @BasePath	  /api/v1/
 func main() {
 	//1. считывание конфигурации
@@ -33,7 +35,6 @@ func main() {
 	var logger = common.NewLogger(cfg) // Создаем логгер
 	logger.Debug("-->> Start Go App : IDM Project ")
 
-	//FIXME
 	// Переопределяем версию приложения, которая будет отображаться в swagger UI.
 	// Пакет docs и структура SwaggerInfo в нём появятся поле генерации документации (см. далее).
 	docs.SwaggerInfo.Version = cfg.AppVersion

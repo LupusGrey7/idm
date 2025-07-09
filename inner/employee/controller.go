@@ -62,11 +62,11 @@ func NewController(
 // RegisterRoutes - функция для регистрации маршрутов
 func (c *Controller) RegisterRoutes() {
 	// полный маршрут получится "/transport/v1/employees"
+	c.server.GroupEmployees.Post("/", c.CreateEmployee)
 	c.server.GroupEmployees.Get("/", c.FindAll)
 	c.server.GroupEmployees.Get("/ids", c.FindAllByIds)
 	c.server.GroupEmployees.Get("/page", c.GetAllPages)
 	c.server.GroupEmployees.Delete("/ids", c.DeleteByIds)
-	c.server.GroupEmployees.Post("/", c.CreateEmployee)
 	c.server.GroupEmployees.Post("/tx", c.CreateEmployeeTx)
 	c.server.GroupEmployees.Get("/:id", c.FindById)
 	c.server.GroupEmployees.Put("/:id", c.Update)
@@ -83,8 +83,8 @@ func (c *Controller) RegisterRoutes() {
 // @Produce 	 json
 // @Param 		 request body 	employee.CreateRequest true "Employee creation details"
 // @Success 	 200  {object}  employee.Response	"Employee response"
-// @Failure      400  {object}  http.ErrResponse	"Bad request"
-// @Failure      500  {object}  http.ErrResponse	"Bad request"
+// @Failure      400  {object}  http.Response		"Bad request"
+// @Failure      500  {object}  http.Response		"Bad request"
 // @Router 		 /employees/ 	[post]
 func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
@@ -141,10 +141,10 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param 		 id   path      	int  true  "Employee ID"
+// @Param 		 id   path      	int  true  			"Employee ID"
 // @Success 	 200  {object}  	employee.Response	"Employee response"
-// @Failure      400  {object}  	http.ErrResponse	"Bad request"
-// @Failure      500  {object}  	http.ErrResponse	"Bad request"
+// @Failure      400  {object}  	http.Response		"Bad request"
+// @Failure      500  {object}  	http.Response		"Bad request"
 // @Router 		 /employees/{id} 	[get]
 func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
@@ -195,13 +195,12 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param   	 pageNumber 		query     	string     			false  "string valid"       minlength(1)  maxlength(10)
-// @Param   	 pageSize 			query     	string     			false  "string valid"       minlength(1)  maxlength(155)
-// @Param   	 textFilter 		query     	string     			false  "string valid"       minlength(0)  maxlength(10)
-// @Success 	 200  				{object}  	employee.Response	"Employee request"
-// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
-// @Failure      404  				{object}  	http.ErrResponse	"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
+// @Param   	 pageNumber 		query	string	false	"string valid"       minlength(1)  maxlength(10)
+// @Param   	 pageSize 			query   string 	false  	"string valid"       minlength(1)  maxlength(155)
+// @Param   	 textFilter 		query   string  false  	"string valid"       minlength(0)  maxlength(10)
+// @Success 	 200  {object} 		employee.Response		"Employee request"
+// @Failure      400  {object}  	http.Response			"Bad request"
+// @Failure      500  {object}  	http.Response			"Bad request"
 // @Router 		 /employees/page 	[get]
 func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
@@ -339,14 +338,15 @@ func (c *Controller) checkNotNullRequestParam(
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Success 	 200  				{array}  	employee.Response	"Employee response"
-// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
-// @Router 		 /employees/ 		[get]
+// @Success 	 200  {array}  		employee.Response	"Employee response"
+// @Failure      400  {object}  	http.Response		"Bad request"
+// @Failure      500  {object}  	http.Response		"Bad request"
+// @Router 		 /employees/		[get]
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
+	c.logger.Info("find all employees", zap.String("request_id", requestId))
 
 	response, err := c.employeeService.FindAll(appContext)
 	if err != nil {
@@ -372,11 +372,11 @@ func (c *Controller) FindAll(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param   	 ids 				query     	string     			true  "Employees ids string values"       minlength(1)
-// @Success 	 200  				{array}  	employee.Response	"Employee response"
-// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
-// @Router 		 /employees/ 		[get]
+// @Param   	 ids  query     	string	true  		"Employees ids string values"       minlength(1)
+// @Success 	 200  {array}  		employee.Response	"Employee response"
+// @Failure      400  {object}  	http.Response		"Bad request"
+// @Failure      500  {object}  	http.Response		"Bad request"
+// @Router 		 /employees/ids		[get]
 func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -406,6 +406,7 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 		}
 		ids = append(ids, id)
 	}
+	c.logger.Info("find by ids", zap.String("request_id", requestId), zap.Any("ids", ids))
 
 	response, err := c.employeeService.FindAllByIds(appContext, ids)
 	if err != nil {
@@ -427,17 +428,17 @@ func (c *Controller) FindAllByIds(ctx *fiber.Ctx) error {
 }
 
 // Update   	 godoc
-// @Summary		 update employee by IDs
-// @Description  Update Employee by IDs
+// @Summary		 update employee by ID
+// @Description  Update Employee by ID
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param        id   				path      	int  					true  "Employee ID" minlength(1)
-// @Param   	 request 			body     	employee.UpdateRequest	true  "Employee updated details"
-// @Success 	 200  				{object}  	employee.Response		"Employee response"
-// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
-// @Router 		 /employees/{id} 	[post]
+// @Param        id   				path      	int  					true  	"Employee ID" 				min(1)
+// @Param   	 request 			body     	employee.UpdateRequest	true  	"Employee updated details"
+// @Success 	 200  				{object}  	employee.Response				"Employee response"
+// @Failure      400  				{object}  	http.Response					"Bad request"
+// @Failure      500  				{object}  	http.Response					"Bad request"
+// @Router 		 /employees/{id} 	[put]
 func (c *Controller) Update(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -465,6 +466,12 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidRequestBody)
 	}
+	c.logger.Debug(
+		"When the Update Employee: ",
+		zap.String("employee name", request.Name),
+		zap.Int64("Id", request.Id),
+		zap.String("request_id", requestId),
+	)
 
 	updatedEmployee, err := c.employeeService.UpdateEmployee(appContext, employeeID, request)
 	if err != nil {
@@ -491,11 +498,11 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param        id   				path      	int  					true  "Employee ID" minlength(1)
-// @Success 	 200  				{object}  	employee.Response		"Employee response"
-// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
-// @Router 		 /employees/{id} 	[delete]
+// @Param        id   path     		int  				true	"Employee ID" 		min(1)
+// @Success 	 200  {object} 		employee.Response			"Employee response"
+// @Failure      400  {object}  	http.Response				"Bad request"
+// @Failure      500  {object} 	 	http.Response				"Bad request"
+// @Router 		 /employees/{id}	[delete]
 func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -512,6 +519,10 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidIDFormat)
 	}
+	c.logger.Debug("Delete employee by:",
+		zap.String("Id", idStr),
+		zap.String("request_id", requestId),
+	)
 
 	response, err := c.employeeService.DeleteById(appContext, employeeID)
 	if err != nil {
@@ -538,11 +549,11 @@ func (c *Controller) DeleteById(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param   	 ids 				query     	string     			true  "Employees ids string values"       minlength(1)
+// @Param   	 ids 				query     	string 	true  		"Employees ids string values"       minlength(1)
 // @Success 	 200  				{array}  	employee.Response	"Employee array"
-// @Failure      400  				{object}  	http.ErrResponse	"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse	"Bad request"
-// @Router 		 /employees/ 		[delete]
+// @Failure      400  				{object}  	http.Response		"Bad request"
+// @Failure      500  				{object} 	http.Response		"Bad request"
+// @Router 		 /employees/ids		[delete]
 func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
 
@@ -575,6 +586,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 		}
 		ids = append(ids, id)
 	}
+	c.logger.Info("ids", zap.String("request_id", requestId), zap.Any("ids", ids))
 
 	response, err := c.employeeService.DeleteByIds(appContext, ids)
 	if err != nil {
@@ -601,11 +613,11 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 // @Tags 		 employee
 // @Accept  	 json
 // @Produce 	 json
-// @Param   	 request			body    	employee.CreateRequest	true  "Employee creation details"       minlength(1)
-// @Success 	 200  				{array}  	employee.Response		"Bad request"
-// @Failure      400  				{object}  	http.ErrResponse		"Bad request"
-// @Failure      500  				{object}  	http.ErrResponse		"Bad request"
-// @Router 		 /employees/tx		[get]
+// @Param   	 request			body    	employee.CreateRequest	true  	"Employee creation details"
+// @Success 	 200  				{array}  	employee.Response				"Bad request"
+// @Failure      400  				{object}  	http.Response					"Bad request"
+// @Failure      500  				{object} 	http.Response					"Bad request"
+// @Router 		 /employees/tx		[post]
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
