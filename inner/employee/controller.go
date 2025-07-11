@@ -31,12 +31,12 @@ type Controller struct {
 	logger          *common.Logger
 }
 
-// Svc - интерфейс сервиса employee.Service
+// Svc - интерфейс сервиса Service class
 type Svc interface {
 	FindAll(ctx context.Context) ([]Response, error)
 	FindById(ctx context.Context, id int64) (Response, error)
 	FindAllByIds(ctx context.Context, ids []int64) ([]Response, error)
-	GetAllByPage(ctx context.Context, req PageRequest) (PageResponse, error) // page int64, limit int64
+	GetAllByPage(ctx context.Context, req PageRequest) (PageResponse, error)
 	CreateEmployee(ctx context.Context, request CreateRequest) (Response, error)
 	CreateEmployeeTx(ctx context.Context, request CreateRequest) (int64, error)
 	UpdateEmployee(ctx context.Context, id int64, request UpdateRequest) (Response, error)
@@ -167,16 +167,17 @@ func (c *Controller) FindById(ctx *fiber.Ctx) error {
 	})
 }
 
-// GetAllPages
 func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	var pageValues []int64
-	pageValues, err := c.parsePageValues(ctx, requestId)
+	var textFilter string
+
+	pageValues, textFilter, err := c.parsePageValues(ctx, requestId)
 	if err != nil {
 		c.logger.Error(
-			"When the parse an page request values for Employees param ended with an error:",
+			"Invalid parse page request values, error:",
 			zap.Error(err),
 			zap.String("request_id", requestId),
 		)
@@ -184,7 +185,12 @@ func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 		return http.ErrResponse(ctx, fiber.StatusBadRequest, invalidPageValuesFormat)
 	}
 
-	req := PageRequest{PageNumber: pageValues[0], PageSize: pageValues[1]}
+	req := PageRequest{
+		PageNumber: pageValues[0],
+		PageSize:   pageValues[1],
+		TextFilter: textFilter,
+	}
+
 	response, err := c.employeeService.GetAllByPage(appContext, req)
 	if err != nil {
 		c.logger.Error(
@@ -204,9 +210,24 @@ func (c *Controller) GetAllPages(ctx *fiber.Ctx) error {
 	return http.OkPageResponse(ctx, response)
 }
 
-func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64, error) {
+// Логирование подозрительных запросов
+func (c *Controller) checkForInjectionAttempt(input string, requestId string) {
+	if strings.ContainsAny(input, ";'\"\\--") {
+		c.logger.Warn(
+			"Potential SQL injection attempt detected",
+			zap.String("input", input),
+			zap.String("request_id", requestId),
+		)
+		//for example
+		//{"level":"warn","timestamp":"2025-07-10 19:01:06.294012","caller":"employee/controller.go:216","msg":"Potential SQL injection attempt detected","input":"test';DROP TABLE employees--","request_id":"80b67040-688b-4ee0-a3b9-f61213ffa76a"}
+		// Можно добавить отправку алерта
+	}
+}
+
+func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64, string, error) {
 	pageNumber := ctx.Query("pageNumber", "1")
 	pageSize := ctx.Query("pageSize", "10")
+	textFilter := ctx.Query("textFilter", "")
 
 	c.logger.Debug(
 		"GetAllPages request",
@@ -215,35 +236,30 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 		zap.String("url", ctx.OriginalURL()),
 		zap.String("pageNumber ", pageNumber),
 		zap.String("pageSize ", pageSize),
+		zap.String("textFilter ", textFilter),
 	)
-	if pageNumber == "" {
-		c.logger.Error(
-			"When the parse an GatAllPages By pageNumber request param ended with an error:",
-			zap.Error(nil),
-			zap.String("request_id", requestId),
-		)
-		return nil, fmt.Errorf("missing pageNumber parameter")
+	c.checkForInjectionAttempt(textFilter, requestId)
+	_, _, err := c.checkNotNullRequestParam(pageNumber, pageSize, requestId)
+	if err != nil {
+		return nil, "", err
 	}
 
-	if pageSize == "" {
-		c.logger.Error(
-			"When the parse an GatAllPages By pageSize request param ended with an error:",
-			zap.Error(nil),
-			zap.String("request_id", requestId),
-		)
-		return nil, fmt.Errorf("missing pageSize parameter")
-	}
-	var pageList = []string{pageNumber, pageSize} // Declares and initializes with values {10, 2}
+	var pageList = []string{pageNumber, pageSize} // Declares and initializes with values, for example {10, 2}
 
 	var pageValues []int64
 
 	for _, idStr := range pageList {
 		value, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("invalid page values format")
+			return nil, "", fmt.Errorf("invalid page values format")
 		}
 		pageValues = append(pageValues, value)
 	}
+	// Двойная проверка (на случай если валидатор пропустит)
+	if pageValues[0] < 1 || pageValues[1] < 1 {
+		return nil, "", fmt.Errorf("invalid pagination parameters")
+	}
+
 	c.logger.Debug(
 		"GetAllPages request",
 		zap.String("request_id", requestId),
@@ -251,12 +267,34 @@ func (c *Controller) parsePageValues(ctx *fiber.Ctx, requestId string) ([]int64,
 		zap.Int64("pageNumber", pageValues[0]),
 		zap.Int64("pageSize", pageValues[1]),
 	)
-	// Двойная проверка (на случай если валидатор пропустит)
-	if pageValues[0] < 1 || pageValues[1] < 1 { // || pageValues[0] > 100
-		return nil, fmt.Errorf("invalid pagination parameters")
+
+	return pageValues, textFilter, nil
+}
+
+func (c *Controller) checkNotNullRequestParam(
+	pageNumber string,
+	pageSize string,
+	requestId string,
+) ([]int64, string, error) {
+	if pageNumber == "" {
+		c.logger.Error(
+			"When the parse pageNumber request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
+		return nil, "", fmt.Errorf("missing pageNumber parameter")
 	}
 
-	return pageValues, nil
+	if pageSize == "" {
+		c.logger.Error(
+			"When the parse pageSize request param ended with an error:",
+			zap.Error(nil),
+			zap.String("request_id", requestId),
+		)
+		return nil, "", fmt.Errorf("missing pageSize parameter")
+	}
+
+	return nil, "", nil
 }
 
 func (c *Controller) FindAll(ctx *fiber.Ctx) error {
@@ -435,9 +473,11 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
 			c.logger.Error(
-				"When the parse an Delete Employees By IDs request param ended with an error:",
+				"parse request param ended with an error:",
 				zap.Error(err),
 				zap.String("request_id", requestId),
+				zap.String("url", ctx.OriginalURL()),
+				zap.String("method", ctx.Method()),
 			)
 
 			return http.ErrResponse(ctx, fiber.StatusBadRequest, "Invalid ID format"+idStr)
@@ -448,7 +488,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 	response, err := c.employeeService.DeleteByIds(appContext, ids)
 	if err != nil {
 		c.logger.Error(
-			"When the delete an Delete Employees By Ids ended with an error: %s",
+			"delete Employees By Ids ended with an error: %s",
 			zap.Error(err),
 			zap.String("request_id", requestId),
 		)
@@ -465,8 +505,7 @@ func (c *Controller) DeleteByIds(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
-	appContext := ctx.UserContext() // получаем контекст приложения из запроса (задаем ранее в App main())
-
+	appContext := ctx.UserContext()                // получаем контекст приложения из запроса (задаем ранее в App main())
 	requestId := ctx.Locals("request_id").(string) // Получаем request_id благодаря middleware func
 
 	var request CreateRequest
@@ -483,9 +522,11 @@ func (c *Controller) CreateEmployeeTx(ctx *fiber.Ctx) error {
 	response, err := c.employeeService.CreateEmployeeTx(appContext, request)
 	if err != nil {
 		c.logger.Error(
-			"When the create Employee ended with an error: %s",
+			"create Employee by Tx ended with an error: %s",
 			zap.Error(err),
 			zap.String("request_id", requestId),
+			zap.String("url", ctx.OriginalURL()),
+			zap.String("method", ctx.Method()),
 		)
 
 		switch {

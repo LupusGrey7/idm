@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -32,25 +33,53 @@ func (r *Repository) FindAllEmployees(ctx context.Context) (employees []Entity, 
 	return employees, err
 }
 
+// GetPageByValues
 // LIMIT number_of_rows: Определяет максимальное количество строк, которое будет возвращено запросом.
-// OFFSET starting_row: Указывает, сколько строк нужно пропустить в начале набора результатов, прежде чем начать выборку. Счет начинается с 0 (первая строка).
+// OFFSET starting_row: Указывает, сколько строк нужно пропустить в начале набора результатов, прежде чем начать выборку.
+// TextFilter не менее, 3 не пробельных (" ", "\n", "\t" и т.п.) символов.
 func (r *Repository) GetPageByValues(
 	ctx context.Context,
-	pageValues []int64,
+	pageValues []int64, // [pageSize, offset]
+	textFilter string,
 ) ([]Entity, int64, error) {
-	var employees []Entity
-	// Запрос данных
-	dataQuery := `SELECT id, name, created_at, updated_at FROM employees LIMIT $1 OFFSET $2`
-	err := r.db.SelectContext(ctx, &employees, dataQuery, pageValues[0], pageValues[1])
-
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to get page employees: %w", err)
+	// 1. Валидация pageValues
+	if len(pageValues) != 2 {
+		return nil, 0, fmt.Errorf("invalid page values format")
 	}
 
-	// Запрос общего количества (GetContext для скалярных значений!)
+	// 2. Подготовка запросов
+	baseQuery := "SELECT id, name, created_at, updated_at FROM employees"
+	countQuery := "SELECT COUNT(*) FROM employees"
+
+	var args []interface{}
+	paramCounter := 1
+
+	// 3. Добавляем фильтр только если он не пустой
+	if textFilter != "" {
+		filteredText := strings.TrimSpace(textFilter)
+		if len(filteredText) >= 3 {
+			safePattern := "%" + strings.ReplaceAll(filteredText, "%", "\\%") + "%"
+			baseQuery += fmt.Sprintf(" WHERE name ILIKE $%d", paramCounter)
+			countQuery += fmt.Sprintf(" WHERE name ILIKE $%d", paramCounter)
+			args = append(args, safePattern)
+			paramCounter++
+		}
+	}
+
+	// 4. Добавляем пагинацию
+	baseQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", paramCounter, paramCounter+1)
+	args = append(args, pageValues[0], pageValues[1])
+
+	// 5. Выполняем запросы
+	var employees []Entity
+	err := r.db.SelectContext(ctx, &employees, baseQuery, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get employees: %w", err)
+	}
+
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM employees`
-	if err := r.db.GetContext(ctx, &total, countQuery); err != nil {
+	err = r.db.GetContext(ctx, &total, countQuery, args[:paramCounter-1]...)
+	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get total count: %w", err)
 	}
 

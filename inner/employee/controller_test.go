@@ -26,8 +26,6 @@ import (
 	"time"
 )
 
-// ... аналогично для других методов
-
 func TestEmployee_Controller(t *testing.T) {
 	// Подготовка тестового .env файла
 	envContent := `DB_DRIVER_NAME=postgres

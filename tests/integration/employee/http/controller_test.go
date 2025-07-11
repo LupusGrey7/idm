@@ -18,6 +18,7 @@ import (
 	"idm/tests/testutils"
 	"io"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -67,8 +68,14 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 	// Регистрируем роуты
 	server.GroupEmployees.Get("/page", ctrl.GetAllPages)
 
+	// Функция очистки БД
+	cleanup := func(t *testing.T) {
+		_, err := db.Exec("DELETE FROM employees WHERE name LIKE 'John %' OR name LIKE 'Jane %'")
+		require.NoError(t, err, "failed to clean up employees")
+	}
+
 	// 5. Тестовые случаи
-	t.Run("first page with 3 items", func(t *testing.T) {
+	t.Run("when first page with 3 items success", func(t *testing.T) {
 		initTestData(repo, t)
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=3", nil)
 
@@ -114,7 +121,7 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, err1)
 	})
 
-	t.Run("second page with 2 items", func(t *testing.T) {
+	t.Run("when second page with 2 items success", func(t *testing.T) {
 		initTestData(repo, t)
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=2&pageSize=3", nil)
 
@@ -164,7 +171,7 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, err1)
 	})
 
-	t.Run("third page with 0 items", func(t *testing.T) {
+	t.Run("when third page with 0 items success", func(t *testing.T) {
 		initTestData(repo, t)
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=3&pageSize=3", nil)
 
@@ -210,7 +217,7 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, err1)
 	})
 
-	t.Run("invalid request parameters", func(t *testing.T) {
+	t.Run("when invalid request parameters return badRequest", func(t *testing.T) {
 		initTestData(repo, t)
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=abc&pageSize=10", nil)
@@ -228,18 +235,21 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		t.Logf("Raw response: %s", string(body))
 
 		assert.Contains(t, errorResp["error"], "Invalid Page Values format")
+
 		//Очистка После тестом (не в Cleanup)
 		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
 		require.NoError(t, err1)
 	})
 
-	t.Run("missing pageNumber", func(t *testing.T) {
+	t.Run("when missing pageNumber then success", func(t *testing.T) {
 		initTestData(repo, t)
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageSize=3", nil)
 
 		resp, _ := app.Test(req)
 		defer closeBody(t, resp.Body)
+
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		var response struct {
 			Success bool   `json:"success"`
@@ -267,13 +277,15 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, err1)
 	})
 
-	t.Run("missing pageSize", func(t *testing.T) {
+	t.Run("when missing pageSize then success", func(t *testing.T) {
 		initTestData(repo, t)
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1", nil)
 
 		resp, _ := app.Test(req)
 		defer closeBody(t, resp.Body)
+
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
 		var response struct {
 			Success bool   `json:"success"`
@@ -291,11 +303,9 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, errMrh)
 		t.Logf("Raw response: %s", string(body))
 
-		// Ожидаем дефолтное значение pageSize = 10
-		assert.Equal(t, int64(1), response.Data.PageNumber) //номер страницы (начиная с 0).
+		assert.Equal(t, int64(1), response.Data.PageNumber) //Номер страницы (начиная с 1).
 		// Ожидаем дефолтное значение pageSize = 10
 		assert.Equal(t, int64(10), response.Data.PageSize) //количество записей на странице
-
 		assert.Equal(t, int64(5), response.Data.Total)
 
 		//Очистка После тестом (не в Cleanup)
@@ -303,7 +313,7 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, err1)
 	})
 
-	t.Run("missing pageNumber and pageSize", func(t *testing.T) {
+	t.Run("when missing pageNumber and pageSize then success", func(t *testing.T) {
 		initTestData(repo, t)
 
 		req := httptest.NewRequest("GET", "/api/v1/employees/page?", nil)
@@ -317,6 +327,8 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 			}
 		}(resp.Body)
 
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
 		var response struct {
 			Success bool   `json:"success"`
 			Message string `json:"error"`
@@ -333,29 +345,316 @@ func TestEmployeePaginationIntegration(t *testing.T) {
 		require.NoError(t, errMrh)
 		t.Logf("Raw response: %s", string(body))
 
-		// Ожидаем дефолтное значение pageSize = 10
-		assert.Equal(t, int64(1), response.Data.PageNumber) //номер страницы (начиная с 0).
+		// Ожидаем дефолтное значение pageNumber = 1
+		assert.Equal(t, int64(1), response.Data.PageNumber) //Номер страницы (начиная с 1).
 		// Ожидаем дефолтное значение pageSize = 10
 		assert.Equal(t, int64(10), response.Data.PageSize) //количество записей на странице
-
 		assert.Equal(t, int64(5), response.Data.Total)
 
 		//Очистка После тестом (не в Cleanup)
 		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
 		require.NoError(t, err1)
 	})
+	//case page
+	t.Run("when empty TextFilter the success", func(t *testing.T) {
+		// Подготовка данных
+		employees := initTestData(repo, t)
+
+		// Запрос без textFilter
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=10&", nil) //textFilter=0
+		req.Header.Set("Accept", "application/json")
+
+		// Логирование маршрутов
+		routes := app.GetRoutes()
+		for _, route := range routes {
+			t.Logf("Route: %s %s", route.Method, route.Path)
+		}
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err, "failed to perform request")
+		defer closeBody(t, resp.Body)
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode, "expected status 200")
+
+		// Проверка сырого ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "failed to read response body")
+		t.Logf("Raw response: %s", string(body))
+
+		// Декодирование ответа
+		var response struct {
+			Success bool   `json:"success"`
+			Message string `json:"error"`
+			Data    struct {
+				Result     []employee.Response `json:"result"`
+				PageSize   int64               `json:"page_size"`
+				PageNumber int64               `json:"page_number"`
+				Total      int64               `json:"total"`
+			} `json:"data"`
+		}
+		err = json.Unmarshal(body, &response)
+		require.NoError(t, err, "failed to decode JSON response")
+
+		// Проверки
+		assert.True(t, response.Success, "expected success true")
+		assert.Empty(t, response.Message, "expected empty error message")
+		// Ожидаем дефолтное значение pageSize = 10
+		assert.Equal(t, int64(1), response.Data.PageNumber) //Номер страницы (начиная с 0).
+		// Ожидаем дефолтное значение pageSize = 10
+		assert.Equal(t, int64(10), response.Data.PageSize) //количество записей на странице
+		assert.Equal(t, int64(5), response.Data.Total)
+
+		names := make([]string, len(response.Data.Result))
+		for i, emp := range response.Data.Result {
+			names[i] = emp.Name
+		}
+		assert.Equal(t, employees[0].Name, names[2]) //because we already have 2 entities in the table before the test
+
+		//Очистка После тестом (не в Cleanup)
+		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
+		require.NoError(t, err1)
+	})
+	t.Run("when Whitespace TextFilter then success", func(t *testing.T) {
+		// Подготовка данных
+		initTestData(repo, t)
+		defer cleanup(t)
+
+		// Запрос с пробельным textFilter
+		textFilter := url.QueryEscape(" \t\n")
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=10&textFilter="+textFilter, nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Логирование маршрутов
+		routes := app.GetRoutes()
+		for _, route := range routes {
+			t.Logf("Route: %s %s", route.Method, route.Path)
+		}
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err, "failed to perform request")
+		defer closeBody(t, resp.Body)
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode, "expected status 200")
+
+		// Проверка сырого ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "failed to read response body")
+		t.Logf("Raw response: %s", string(body))
+
+		// Декодирование ответа
+		var response struct {
+			Success bool   `json:"success"`
+			Message string `json:"error"`
+			Data    struct {
+				Result     []employee.Response `json:"result"`
+				PageSize   int64               `json:"page_size"`
+				PageNumber int64               `json:"page_number"`
+				Total      int64               `json:"total"`
+			} `json:"data"`
+		}
+		err = json.Unmarshal(body, &response)
+		require.NoError(t, err, "failed to decode JSON response")
+
+		// Проверки
+		assert.True(t, response.Success, "expected success true")
+		assert.Empty(t, response.Message, "expected empty error message")
+
+		assert.Equal(t, int64(1), response.Data.PageNumber) //Номер страницы (начиная с 1).
+		assert.Equal(t, int64(10), response.Data.PageSize)  //количество записей на странице
+		assert.Equal(t, int64(5), response.Data.Total)
+
+		//Очистка После тестом (не в Cleanup)
+		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
+		require.NoError(t, err1)
+	})
+
+	t.Run("Short TextFilter (<3 chars) then badRequest", func(t *testing.T) {
+		// Подготовка данных
+		initTestData(repo, t)
+		defer cleanup(t)
+
+		// Запрос с коротким textFilter
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=10&textFilter=Jo", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Логирование маршрутов
+		routes := app.GetRoutes()
+		for _, route := range routes {
+			t.Logf("Route: %s %s", route.Method, route.Path)
+		}
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err, "failed to perform request")
+		defer closeBody(t, resp.Body)
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "expected status 400")
+
+		// Проверка сырого ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "failed to read response body")
+		t.Logf("Raw response: %s", string(body))
+
+		// Декодирование ответа
+		var response struct {
+			Success bool   `json:"success"`
+			Message string `json:"error"`
+			Data    struct {
+				Result     []employee.Response `json:"result"`
+				PageSize   int64               `json:"page_size"`
+				PageNumber int64               `json:"page_number"`
+				Total      int64               `json:"total"`
+			} `json:"data"`
+		}
+		err = json.Unmarshal(body, &response)
+		require.NoError(t, err, "failed to decode JSON response")
+
+		// Проверки
+		assert.False(t, response.Success, "expected success false")
+		assert.Equal(t, "TextFilter must be at least 3 characters", response.Message, "expected validation error")
+		assert.Empty(t, response.Data.Result, "expected empty result")
+		assert.Equal(t, int64(0), response.Data.PageSize, "expected page_size 0")
+		assert.Equal(t, int64(0), response.Data.PageNumber, "expected page_number 0")
+		assert.Equal(t, int64(0), response.Data.Total, "expected total 0")
+
+		//Очистка После тестом (не в Cleanup)
+		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
+		require.NoError(t, err1)
+	})
+
+	t.Run("when Valid TextFilter (>=3 chars) success", func(t *testing.T) {
+		// Подготовка данных
+		initTestData(repo, t)
+		defer cleanup(t)
+
+		// Запрос с валидным textFilter
+		req := httptest.NewRequest("GET", "/api/v1/employees/page?pageNumber=1&pageSize=10&textFilter=Employee", nil)
+		req.Header.Set("Accept", "application/json")
+
+		// Логирование маршрутов
+		routes := app.GetRoutes()
+		for _, route := range routes {
+			t.Logf("Route: %s %s", route.Method, route.Path)
+		}
+
+		// Выполнение запроса
+		resp, err := app.Test(req)
+		require.NoError(t, err, "failed to perform request")
+		defer closeBody(t, resp.Body)
+
+		// Проверка сырого ответа
+		body, err := io.ReadAll(resp.Body)
+		t.Logf("Raw response: %s", string(body))
+
+		// Проверка статуса
+		assert.Equal(t, fiber.StatusOK, resp.StatusCode, "expected status 200")
+
+		require.NoError(t, err, "failed to read response body")
+		t.Logf("Raw response: %s", string(body))
+
+		// Декодирование ответа
+		var response struct {
+			Success bool   `json:"success"`
+			Message string `json:"error"`
+			Data    struct {
+				Result     []employee.Response `json:"result"`
+				PageSize   int64               `json:"page_size"`
+				PageNumber int64               `json:"page_number"`
+				Total      int64               `json:"total"`
+			} `json:"data"`
+		}
+		err = json.Unmarshal(body, &response)
+		require.NoError(t, err, "failed to decode JSON response")
+
+		// Проверки
+		assert.True(t, response.Success, "expected success true")
+		assert.Empty(t, response.Message, "expected empty error message")
+		assert.Equal(t, int64(1), response.Data.PageNumber, "expected page_number 0")
+		assert.Equal(t, int64(len(response.Data.Result)), int64(3), "expected page_size to match result length")
+		assert.Equal(t, int64(3), response.Data.Total, "expected total 3 (Employee 1, Employee 2, Employee 3)")
+
+		expected := []string{"Employee 1", "Employee 2", "Employee 3"}
+		names := make([]string, len(response.Data.Result))
+		for i, emp := range response.Data.Result {
+			names[i] = emp.Name
+		}
+		assert.ElementsMatch(t, expected, names, "expected employees with 'Employee ' in name")
+
+		//Очистка После тестом (не в Cleanup)
+		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
+		require.NoError(t, err1)
+	})
+	t.Run("when TextFilter contains SQL injection then badRequest", func(t *testing.T) {
+		// Подготовка данных
+		initTestData(repo, t)
+		defer cleanup(t)
+
+		// 1. Формируем безопасный URL с экранированными параметрами
+		baseURL := "/api/v1/employees/page"
+		params := url.Values{}
+		params.Add("pageNumber", "1")
+		params.Add("pageSize", "10")
+		params.Add("textFilter", "test';DROP TABLE employees--")
+		fullURL := baseURL + "?" + params.Encode()
+
+		// 2. Создаем запрос с правильным экранированием
+		req := httptest.NewRequest("GET", fullURL, nil)
+		req.Header.Set("Accept", "application/json")
+
+		// 3. Выполняем запрос
+		resp, err := app.Test(req)
+		require.NoError(t, err, "failed to perform request")
+		defer closeBody(t, resp.Body)
+
+		// 4. Проверяем, что запрос был отклонен (ожидаем 400 Bad Request)
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode,
+			"expected status 400 for SQL injection attempt")
+
+		// 5. Проверяем тело ответа
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err, "failed to read response body")
+
+		var errorResponse struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error"`
+		}
+		err = json.Unmarshal(body, &errorResponse)
+		require.NoError(t, err, "failed to decode error response")
+
+		assert.False(t, errorResponse.Success, "expected success false for invalid request")
+		assert.Contains(t, errorResponse.Error, "forbidden SQL characters",
+			"expected SQL injection detection message")
+
+		// 6. Проверяем, что данные не изменились (таблица не удалена)
+		var count int
+		err = db.GetContext(context.Background(), &count, "SELECT COUNT(*) FROM employees")
+		require.NoError(t, err)
+		assert.Greater(t, count, 0, "database table should not be dropped")
+
+		//Очистка После теста (не в Cleanup)
+		_, err1 := db.Exec("DELETE FROM employees WHERE name LIKE 'Employee %'")
+		require.NoError(t, err1)
+	})
 }
 
-func initTestData(repo *employee.Repository, t *testing.T) {
+func initTestData(repo *employee.Repository, t *testing.T) []employee.Entity {
+	var entityes = []employee.Entity{}
 	for i := 1; i <= 3; i++ {
 		var request = employee.CreateRequest{Name: fmt.Sprintf("Employee %d", i)}
 		var toEntity = request.ToEntity()
-		_, err := repo.CreateEmployee(
+		entity, err := repo.CreateEmployee(
 			context.Background(),
 			toEntity,
 		)
 		require.NoError(t, err)
+		entityes = append(entityes, entity)
 	}
+	return entityes
 }
 
 func closeBody(t *testing.T, body io.ReadCloser) {
