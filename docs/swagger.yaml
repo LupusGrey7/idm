@@ -1,0 +1,348 @@
+basePath: /api/v1/
+definitions:
+  employee.CreateRequest:
+    description: Employee account information with name
+    properties:
+      name:
+        maxLength: 155
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  employee.Response:
+    description: Employee account information with employee id, name, createAt, updateAt
+    properties:
+      createAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updateAt:
+        type: string
+    type: object
+  employee.UpdateRequest:
+    description: Employee account information with employee id, name, createAt, updateAt
+    properties:
+      createdAt:
+        type: string
+      id:
+        minimum: 1
+        type: integer
+      name:
+        maxLength: 155
+        minLength: 2
+        type: string
+      updatedAt:
+        type: string
+    required:
+    - createdAt
+    - id
+    - name
+    - updatedAt
+    type: object
+  idm_inner_http.Response:
+    description: Common API response format
+    properties:
+      data: {}
+      error:
+        example: Invalid request format
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+host: 127.0.0.1:8080
+info:
+  contact: {}
+  description: This is an example of a simple employee app.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: IDM API documentation
+  version: "1.0"
+paths:
+  /employees/:
+    get:
+      consumes:
+      - application/json
+      description: Find all Employees
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            items:
+              $ref: '#/definitions/employee.Response'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: get all employees
+      tags:
+      - employee
+    post:
+      consumes:
+      - application/json
+      description: Create a new employee
+      parameters:
+      - description: Employee creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/employee.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            $ref: '#/definitions/employee.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: create a new employee
+      tags:
+      - employee
+  /employees/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete Employee by ID
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            $ref: '#/definitions/employee.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: delete employee by ID
+      tags:
+      - employee
+    get:
+      consumes:
+      - application/json
+      description: Find by ID employee
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            $ref: '#/definitions/employee.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: find by ID employee
+      tags:
+      - employee
+    put:
+      consumes:
+      - application/json
+      description: Update Employee by ID
+      parameters:
+      - description: Employee ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Employee updated details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/employee.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            $ref: '#/definitions/employee.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: update employee by ID
+      tags:
+      - employee
+  /employees/ids:
+    delete:
+      consumes:
+      - application/json
+      description: Find all Employees by IDs
+      parameters:
+      - description: Employees ids string values
+        in: query
+        minLength: 1
+        name: ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee array
+          schema:
+            items:
+              $ref: '#/definitions/employee.Response'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: get all employees by IDs
+      tags:
+      - employee
+    get:
+      consumes:
+      - application/json
+      description: Find all Employees by IDs
+      parameters:
+      - description: Employees ids string values
+        in: query
+        minLength: 1
+        name: ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee response
+          schema:
+            items:
+              $ref: '#/definitions/employee.Response'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: get all employees by IDs
+      tags:
+      - employee
+  /employees/page:
+    get:
+      consumes:
+      - application/json
+      description: Find all Employees by page
+      parameters:
+      - description: string valid
+        in: query
+        maxLength: 10
+        minLength: 1
+        name: pageNumber
+        type: string
+      - description: string valid
+        in: query
+        maxLength: 155
+        minLength: 1
+        name: pageSize
+        type: string
+      - description: string valid
+        in: query
+        maxLength: 10
+        minLength: 0
+        name: textFilter
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee request
+          schema:
+            $ref: '#/definitions/employee.Response'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: get all employees by page
+      tags:
+      - employee
+  /employees/tx:
+    post:
+      consumes:
+      - application/json
+      description: Create Employee by Transactional
+      parameters:
+      - description: Employee creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/employee.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bad request
+          schema:
+            items:
+              $ref: '#/definitions/employee.Response'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+        "500":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/idm_inner_http.Response'
+      summary: create employee by transactional
+      tags:
+      - employee
+swagger: "2.0"

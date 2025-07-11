@@ -1,0 +1,516 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is an example of a simple employee app.",
+        "title": "IDM API documentation",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "127.0.0.1:8080",
+    "basePath": "/api/v1/",
+    "paths": {
+        "/employees/": {
+            "get": {
+                "description": "Find all Employees",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "get all employees",
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/employee.Response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new employee",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "create a new employee",
+                "parameters": [
+                    {
+                        "description": "Employee creation details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/employee.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "$ref": "#/definitions/employee.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/employees/ids": {
+            "get": {
+                "description": "Find all Employees by IDs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "get all employees by IDs",
+                "parameters": [
+                    {
+                        "minLength": 1,
+                        "type": "string",
+                        "description": "Employees ids string values",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/employee.Response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Find all Employees by IDs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "get all employees by IDs",
+                "parameters": [
+                    {
+                        "minLength": 1,
+                        "type": "string",
+                        "description": "Employees ids string values",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee array",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/employee.Response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/employees/page": {
+            "get": {
+                "description": "Find all Employees by page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "get all employees by page",
+                "parameters": [
+                    {
+                        "maxLength": 10,
+                        "minLength": 1,
+                        "type": "string",
+                        "description": "string valid",
+                        "name": "pageNumber",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 155,
+                        "minLength": 1,
+                        "type": "string",
+                        "description": "string valid",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 10,
+                        "minLength": 0,
+                        "type": "string",
+                        "description": "string valid",
+                        "name": "textFilter",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee request",
+                        "schema": {
+                            "$ref": "#/definitions/employee.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/employees/tx": {
+            "post": {
+                "description": "Create Employee by Transactional",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "create employee by transactional",
+                "parameters": [
+                    {
+                        "description": "Employee creation details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/employee.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/employee.Response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/employees/{id}": {
+            "get": {
+                "description": "Find by ID employee",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "find by ID employee",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Employee ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "$ref": "#/definitions/employee.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Update Employee by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "update employee by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Employee ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Employee updated details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/employee.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "$ref": "#/definitions/employee.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete Employee by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "employee"
+                ],
+                "summary": "delete employee by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Employee ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Employee response",
+                        "schema": {
+                            "$ref": "#/definitions/employee.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/idm_inner_http.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "employee.CreateRequest": {
+            "description": "Employee account information with name",
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 155,
+                    "minLength": 2
+                }
+            }
+        },
+        "employee.Response": {
+            "description": "Employee account information with employee id, name, createAt, updateAt",
+            "type": "object",
+            "properties": {
+                "createAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updateAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "employee.UpdateRequest": {
+            "description": "Employee account information with employee id, name, createAt, updateAt",
+            "type": "object",
+            "required": [
+                "createdAt",
+                "id",
+                "name",
+                "updatedAt"
+            ],
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 155,
+                    "minLength": 2
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "idm_inner_http.Response": {
+            "description": "Common API response format",
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "string",
+                    "example": "Invalid request format"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        }
+    }
+}

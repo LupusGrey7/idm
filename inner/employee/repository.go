@@ -166,6 +166,7 @@ func (r *Repository) CreateEmployee(
 
 	err = r.db.GetContext(ctx, &result, query, args...)
 	log.Printf("Result Employee ->> %v", result)
+
 	return result, err
 }
 

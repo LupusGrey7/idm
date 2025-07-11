@@ -4,17 +4,27 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// Response model info
+// Response is a common response structure
+// @Description Common API response format
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"error"`
-	Data    interface{} `json:"data"`
-}
-type PageResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"error"`
+	Success bool        `json:"success" example:"false"`
+	Message string      `json:"error" example:"Invalid request format"`
 	Data    interface{} `json:"data"`
 }
 
+// PageResponse model info
+// PageResponse is a common pageResponse structure
+// @Description Common API pageResponse format
+type PageResponse struct {
+	Success bool        `json:"success" example:"false"`
+	Message string      `json:"error" example:"Invalid request format"`
+	Data    interface{} `json:"data"`
+}
+
+// ErrResponse model info
+// @Description ErrResponse Controller response information
+// @Description with status, Response
 func ErrResponse(
 	c *fiber.Ctx,
 	code int,
@@ -27,6 +37,9 @@ func ErrResponse(
 	})
 }
 
+// OkResponse
+// @Description ErrResponse Controller response information
+// @Description with status 200, Response
 func OkResponse(
 	c *fiber.Ctx,
 	data interface{},
@@ -37,6 +50,9 @@ func OkResponse(
 	})
 }
 
+// OkPageResponse
+// @Description ErrResponse Controller response information
+// @Description with status 200, PageResponse
 func OkPageResponse(
 	c *fiber.Ctx,
 	data interface{},
@@ -48,6 +64,8 @@ func OkPageResponse(
 }
 
 // CreatedResponse - Дополнительная функция для 201 Created
+// @Description ErrResponse Controller response information
+// @Description with status 201, Response
 func CreatedResponse(
 	c *fiber.Ctx,
 	data interface{},
