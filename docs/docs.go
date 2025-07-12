@@ -524,11 +524,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "127.0.0.1:8080",
+	Host:             "localhost:8080",
 	BasePath:         "/api/v1/",
-	Schemes:          []string{},
+	Schemes:          []string{"https", "http"},
 	Title:            "IDM API documentation",
-	Description:      "This is an example of a simple employee app.",
+	Description:      "This is a simple application for managing employees.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

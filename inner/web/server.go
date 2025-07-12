@@ -2,6 +2,7 @@ package web
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger" // swagger middleware
 	_ "idm/docs"
 	"idm/inner/common"
@@ -34,6 +35,11 @@ func NewServer(logger *common.Logger) *Server {
 
 	// регистрация middleware, передаем logger
 	middleware.RegisterMiddleware(app, logger)
+	// Настройка CORS for swagger
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+	}))
 
 	groupSwagger := app.Group(SwaggerURL, swagger.HandlerDefault) // создаём группу "/swagger/"
 	groupInternal := app.Group(InternalPath)                      // Группа непубличного API "/internal"

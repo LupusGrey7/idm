@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/google/uuid"
 	"idm/inner/common"
@@ -29,33 +30,14 @@ func RegisterMiddleware(app *fiber.App, logger *common.Logger) {
 		return c.Next()
 	})
 
-	//app.Use(recover.New()) // middleware для восстановления после паники
-	// Recover middleware - использовать в стабильных версиях Fiber после  v2.52.8(июнь 2025)  присутствует баг который не обойти
-	//app.Use(recover.New(recover.Config{
-	//	EnableStackTrace: true,
-	//	StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
-	//		requestID, _ := c.Locals("request_id").(string)
-	//		logger.Info("StackTraceHandler called")
-	//		logger.Error("Panic recovered",
-	//			zap.Any("error", e),
-	//			zap.String("path", c.Path()),
-	//			zap.String("request_id", requestID),
-	//		)
-	//		// Очищаем контекст ответа, чтобы избежать дефолтного ответа Fiber
-	//		c.Response().Reset()
-	//		// Явно устанавливаем Content-Type
-	//		c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
-	//		// Отправляем JSON
-	//		err := c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-	//			"error": "Internal server error",
-	//		})
-	//		if err != nil {
-	//			logger.Error("Failed to send JSON response", zap.Error(err))
-	//		} else {
-	//			logger.Info("JSON response sent successfully")
-	//		}
-	//	},
-	//}))
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "https://localhost:8080",
+		AllowMethods:     "GET,POST,HEAD,PUT,DELETE,PATCH",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		ExposeHeaders:    "Content-Length",
+		AllowCredentials: true,
+	})) // add CORS middleware for Swagger UI can use HTTPS request after added ssl cert
+
 	app.Use(CustomRecoverMiddleware(logger)) //app.Use(recover.New()) // middleware для восстановления после паники
 
 }
@@ -93,3 +75,32 @@ func CustomRecoverMiddleware(logger *common.Logger) fiber.Handler {
 		return c.Next()
 	}
 }
+
+// recover for RegisterMiddleware
+//app.Use(recover.New()) // middleware для восстановления после паники
+// Recover middleware - использовать в стабильных версиях Fiber после  v2.52.8(июнь 2025)  присутствует баг который не обойти
+//app.Use(recover.New(recover.Config{
+//	EnableStackTrace: true,
+//	StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
+//		requestID, _ := c.Locals("request_id").(string)
+//		logger.Info("StackTraceHandler called")
+//		logger.Error("Panic recovered",
+//			zap.Any("error", e),
+//			zap.String("path", c.Path()),
+//			zap.String("request_id", requestID),
+//		)
+//		// Очищаем контекст ответа, чтобы избежать дефолтного ответа Fiber
+//		c.Response().Reset()
+//		// Явно устанавливаем Content-Type
+//		c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+//		// Отправляем JSON
+//		err := c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+//			"error": "Internal server error",
+//		})
+//		if err != nil {
+//			logger.Error("Failed to send JSON response", zap.Error(err))
+//		} else {
+//			logger.Info("JSON response sent successfully")
+//		}
+//	},
+//}))
