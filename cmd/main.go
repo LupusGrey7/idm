@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/role"
 	"idm/inner/validator"
+	"net"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -24,11 +26,12 @@ import (
 
 // @title 	 	  IDM API documentation
 // @version		  1.0
-// @description	  This is an example of a simple employee app.
+// @description	  This is a simple application for managing employees.
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
-// @host      	   127.0.0.1:8080
+// @host      	  localhost:8080
 // @BasePath	  /api/v1/
+// @schemes 	  https http
 func main() {
 	//1. считывание конфигурации
 	cfg := config.GetConfig(".env")
@@ -55,14 +58,13 @@ func main() {
 	//4. создание сервера
 	var server = build(ctx, db, cfg, logger)
 
+	// add tsl logic for using ssl cert(https)
+	var ln = setupTLSListener(cfg, logger)
+
 	//5. Запускаем сервер в отдельной горутине
 	go func() {
-		var err = server.App.Listen(":8080")
-		if err != nil {
-			logger.Panic(
-				"HTTP server error:",
-				zap.Error(err),
-			) // паникуем через метод логгера (custom common. Logger)
+		if err := server.App.Listener(ln); err != nil {
+			logger.Fatal("HTTPS server failed", zap.Error(err))
 		}
 	}()
 
@@ -76,6 +78,30 @@ func main() {
 	//8. Ожидаем сигнал от горутины gracefulShutdown, что сервер завершил работу
 	wg.Wait()
 	logger.Info("graceful shutdown complete") // все события логируем через общий логгер
+}
+
+// Загрузка сертификатов. Создание конфигурации.
+func setupTLSListener(
+	cfg config.Config,
+	logger *common.Logger,
+) net.Listener {
+	// загружаем сертификаты
+	cer, err := tls.LoadX509KeyPair(cfg.SslSert, cfg.SslKey)
+	if err != nil {
+		logger.Panic("failed certificate loading: %s", zap.Error(err))
+	}
+	// создаём конфигурацию TLS сервера
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cer},
+		MinVersion:   tls.VersionTLS12, // Обязательно указываем минимальную версию TLS
+	}
+	// создаём слушателя https соединения
+	ln, err := tls.Listen("tcp", ":8080", tlsConfig)
+	if err != nil {
+		logger.Panic("failed TLS listener creating: %s", zap.Error(err))
+	}
+
+	return ln
 }
 
 // Функция инициализация БД и миграций (Выносим инициализацию БД в отдельную функцию)

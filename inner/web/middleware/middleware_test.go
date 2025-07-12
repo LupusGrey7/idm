@@ -17,12 +17,16 @@ import (
 func TestMiddleware(t *testing.T) {
 	// Создаём логгер для тестов
 	// Подготовка тестового .env файла
-	envContent := `DB_DRIVER_NAME=postgres
+	envContent := `
+DB_DRIVER_NAME=postgres
 DB_DSN=host=127.0.0.1 user=test dbname=idm_tests
 APP_NAME=TestIdm
 APP_VERSION=1.0.0
 LOG_LEVEL=DEBUG
-LOG_DEVELOP_MODE=true`
+LOG_DEVELOP_MODE=true
+SSL_SERT=certs/ssl.cert
+SSL_KEY=certs/ssl.key
+`
 	envFile := ".test.env"
 	err := os.WriteFile(envFile, []byte(envContent), 0644)
 	require.NoError(t, err)
