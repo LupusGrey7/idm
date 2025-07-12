@@ -57,11 +57,9 @@ func main() {
 
 	//4. создание сервера
 	var server = build(ctx, db, cfg, logger)
-	// add tsl logic for using ssl cert
-	var ln, errls = setupTLSListener(cfg, logger)
-	if errls != nil {
-		logger.Panic("failed TLS listener creating: %s", zap.Error(err))
-	}
+
+	// add tsl logic for using ssl cert(https)
+	var ln = setupTLSListener(cfg, logger)
 
 	//5. Запускаем сервер в отдельной горутине
 	go func() {
@@ -82,11 +80,11 @@ func main() {
 	logger.Info("graceful shutdown complete") // все события логируем через общий логгер
 }
 
-// uploadCerts - загрузка сертификатов. Создание конфигурации.
+// Загрузка сертификатов. Создание конфигурации.
 func setupTLSListener(
 	cfg config.Config,
 	logger *common.Logger,
-) (net.Listener, error) {
+) net.Listener {
 	// загружаем сертификаты
 	cer, err := tls.LoadX509KeyPair(cfg.SslSert, cfg.SslKey)
 	if err != nil {
@@ -99,8 +97,11 @@ func setupTLSListener(
 	}
 	// создаём слушателя https соединения
 	ln, err := tls.Listen("tcp", ":8080", tlsConfig)
+	if err != nil {
+		logger.Panic("failed TLS listener creating: %s", zap.Error(err))
+	}
 
-	return ln, nil
+	return ln
 }
 
 // Функция инициализация БД и миграций (Выносим инициализацию БД в отдельную функцию)
